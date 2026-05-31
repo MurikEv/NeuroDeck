@@ -1,0 +1,212 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>MainWindow</class>
+ <widget class="QMainWindow" name="MainWindow">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>480</width>
+    <height>320</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string>MainWindow</string>
+  </property>
+  <widget class="QWidget" name="centralwidget">
+   <widget class="QStackedWidget" name="stackedWidget">
+    <property name="geometry">
+     <rect>
+      <x>0</x>
+      <y>0</y>
+      <width>480</width>
+      <height>320</height>
+     </rect>
+    </property>
+    <property name="currentIndex">
+     <number>8</number>
+    </property>
+    <widget class="QWidget" name="ai_screen"/>
+    <widget class="QWidget" name="calculator_screen"/>
+    <widget class="QWidget" name="camera_screen"/>
+    <widget class="QWidget" name="browser_screen"/>
+    <widget class="QWidget" name="notepad_screen"/>
+    <widget class="QWidget" name="fileexplorer_screen"/>
+    <widget class="QWidget" name="messenger_screen"/>
+    <widget class="QWidget" name="settings_screen"/>
+    <widget class="QWidget" name="menu_screen">
+     <property name="styleSheet">
+      <string notr="true">QWidget#menu_screen {
+    background-image: url(assets/background/fmenu_bg-320x480.png);
+    background-position: center;
+    background-repeat: no-repeat;
+}</string>
+     </property>
+     <widget class="QPushButton" name="messenger_btn">
+      <property name="geometry">
+       <rect>
+        <x>10</x>
+        <y>230</y>
+        <width>61</width>
+        <height>61</height>
+       </rect>
+      </property>
+      <property name="styleSheet">
+       <string notr="true">background-color: transparent;
+color:cyan;
+border-style:outset;
+border-width:2px;
+border-radius:10px;</string>
+      </property>
+      <property name="text">
+       <string>mess</string>
+      </property>
+     </widget>
+     <widget class="QPushButton" name="fileexplorer_btn">
+      <property name="geometry">
+       <rect>
+        <x>410</x>
+        <y>158</y>
+        <width>61</width>
+        <height>61</height>
+       </rect>
+      </property>
+      <property name="styleSheet">
+       <string notr="true">background-color: transparent;
+color:cyan;
+border-style:outset;
+border-width:2px;
+border-radius:10px;</string>
+      </property>
+      <property name="text">
+       <string>file exp</string>
+      </property>
+     </widget>
+     <widget class="QPushButton" name="camera_btn">
+      <property name="geometry">
+       <rect>
+        <x>10</x>
+        <y>85</y>
+        <width>61</width>
+        <height>61</height>
+       </rect>
+      </property>
+      <property name="styleSheet">
+       <string notr="true">background-color: transparent;
+color:cyan;
+border-style:outset;
+border-width:2px;
+border-radius:10px;
+</string>
+      </property>
+      <property name="text">
+       <string>camera</string>
+      </property>
+     </widget>
+     <widget class="QPushButton" name="ai_btn">
+      <property name="geometry">
+       <rect>
+        <x>10</x>
+        <y>12</y>
+        <width>61</width>
+        <height>61</height>
+       </rect>
+      </property>
+      <property name="styleSheet">
+       <string notr="true">background-color: transparent;
+color:cyan;
+border-style:outset;
+border-width:2px;
+border-radius:10px;</string>
+      </property>
+      <property name="text">
+       <string>AI</string>
+      </property>
+     </widget>
+     <widget class="QPushButton" name="settings_btn">
+      <property name="geometry">
+       <rect>
+        <x>410</x>
+        <y>230</y>
+        <width>61</width>
+        <height>61</height>
+       </rect>
+      </property>
+      <property name="styleSheet">
+       <string notr="true">background-color: transparent;
+color:cyan;
+border-style:outset;
+border-width:2px;
+border-radius:10px;</string>
+      </property>
+      <property name="text">
+       <string>settings</string>
+      </property>
+     </widget>
+     <widget class="QPushButton" name="notepad_btn">
+      <property name="geometry">
+       <rect>
+        <x>10</x>
+        <y>158</y>
+        <width>61</width>
+        <height>61</height>
+       </rect>
+      </property>
+      <property name="styleSheet">
+       <string notr="true">background-color: transparent;
+color:cyan;
+border-style:outset;
+border-width:2px;
+border-radius:10px;</string>
+      </property>
+      <property name="text">
+       <string>notepad</string>
+      </property>
+     </widget>
+     <widget class="QPushButton" name="browser_btn">
+      <property name="geometry">
+       <rect>
+        <x>410</x>
+        <y>85</y>
+        <width>61</width>
+        <height>61</height>
+       </rect>
+      </property>
+      <property name="styleSheet">
+       <string notr="true">background-color: transparent;
+color:cyan;
+border-style:outset;
+border-width:2px;
+border-radius:10px;</string>
+      </property>
+      <property name="text">
+       <string>browser</string>
+      </property>
+     </widget>
+     <widget class="QPushButton" name="calculator_btn">
+      <property name="geometry">
+       <rect>
+        <x>410</x>
+        <y>12</y>
+        <width>61</width>
+        <height>61</height>
+       </rect>
+      </property>
+      <property name="styleSheet">
+       <string notr="true">background-color: transparent;
+color:cyan;
+border-style:outset;
+border-width:2px;
+border-radius:10px;</string>
+      </property>
+      <property name="text">
+       <string>calculator</string>
+      </property>
+     </widget>
+    </widget>
+   </widget>
+  </widget>
+ </widget>
+ <resources/>
+ <connections/>
+</ui>
