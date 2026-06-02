@@ -28,7 +28,6 @@ class MainMenu:
         window.messenger_btn.clicked.connect(lambda: state.ui_queue.put(("messenger", None)))
         window.settings_btn.clicked.connect(lambda: state.ui_queue.put(("settings", None)))
 
-        window.keyPressEvent = self.on_key
         self.highlight()
         
     base_style = "background-color: transparent; color: cyan; border-style: outset; border-width: 2px; border-radius: 10px;"
@@ -44,7 +43,7 @@ class MainMenu:
                 else:
                     btn.setStyleSheet(self.base_style)
 
-    def on_key(self, event: QKeyEvent):
+    def handle_key(self, event):
         key = event.key()
         if key == Qt.Key.Key_Right:
             self.selected_col = (self.selected_col + 1) % len(self.buttons[self.selected_row])
