@@ -78,21 +78,20 @@ Create a working calculator screen.
 ### Tasks
 
 * ☑ Create calculator screen
-* [ ] Show calculator display
-* [ ] Allow number input
-* [ ] Allow basic operators:
-
+* ☑ Show calculator display
+* ☑ Allow number input
+* ☑ Allow basic operators:
   * `+`
   * `-`
   * `*`
   * `/`
-* [ ] Add decimal point support
-* [ ] Add brackets support
-* [ ] Add power operator
-* [ ] Add square root support
-* [ ] Add Backspace
-* [ ] Add Clear
-* [ ] Add error handling
+* ☑ Add decimal point support
+* ☑ Add brackets support
+* ☑ Add power operator
+* ☑ Add square root support
+* ☑ Add Backspace
+* ☑ Add Clear
+* ☑ Add error handling
 
 ### Done When
 
@@ -102,7 +101,48 @@ Create a working calculator screen.
 
 ---
 
-## Phase 4 — Camera Mode
+## Phase 4 — AI Chat Mode
+
+### Goal
+
+Create a simple AI chat module that can work in two modes:
+
+1. Offline mode — basic local AI when there is no internet.
+2. Online mode — external AI API when internet is available.
+
+### Tasks
+
+### Tasks
+
+* [ ] Create AI screen
+* [ ] Create AI service
+* [ ] Add user text input
+* [ ] Add AI answer display
+* [ ] Send prompt on button click
+* [ ] Load API key from `.env`
+* [ ] Check internet connection
+* [ ] Use online AI when internet is available
+* [ ] Use offline fallback when internet is not available
+* [ ] Keep chat history when switching screens
+* [ ] Clear chat only when user clicks Clear Chat button
+* [ ] Show loading state
+* [ ] Show error message instead of crashing
+* [ ] Add scroll support for long answers
+* [ ] Return to menu without losing app stability
+
+### Done When
+
+* User can open AI screen.
+* User can type a message.
+* App can answer using online AI when internet works.
+* Chat is not cleared automatically when switching to menu.
+* App does not crash when internet is missing.
+* App shows a basic offline response when internet is missing.
+* Long answers can be read.
+
+---
+
+## Phase 5 — Camera Mode
 
 ### Goal
 
@@ -127,33 +167,7 @@ Create a stable camera preview and photo capture system.
 
 ---
 
-## Phase 5 — AI Image Answer Mode
 
-### Goal
-
-Send captured image to AI and show answer on screen.
-
-### Tasks
-
-* [ ] Create AI service
-* [ ] Load API key from `.env`
-* [ ] Encode image to base64
-* [ ] Send image to AI model
-* [ ] Create clean prompt for Polish school-style answers
-* [ ] Show AI answer in UI
-* [ ] Add loading state
-* [ ] Add error handling for API problems
-* [ ] Add scroll support for long answers
-
-### Done When
-
-* User can take a photo.
-* AI receives the image.
-* AI answer appears in the app.
-* Long answers can be read.
-* API errors do not crash the program.
-
----
 
 ## Phase 6 — Files System
 
