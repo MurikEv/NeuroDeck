@@ -131,7 +131,7 @@ p, li { white-space: pre-wrap; }
        <set>Qt::AlignCenter</set>
       </property>
      </widget>
-     <widget class="QTextEdit" name="textEdit">
+     <widget class="QTextEdit" name="ai_output">
       <property name="geometry">
        <rect>
         <x>10</x>
@@ -139,6 +139,11 @@ p, li { white-space: pre-wrap; }
         <width>461</width>
         <height>201</height>
        </rect>
+      </property>
+      <property name="font">
+       <font>
+        <pointsize>12</pointsize>
+       </font>
       </property>
       <property name="styleSheet">
        <string notr="true">border: 1px solid grey;

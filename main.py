@@ -6,6 +6,7 @@ from screens.menu_screen import MainMenu
 from screens.calculator_screen import Calculator
 from services.camera_service import camera
 from services import network_service
+from services.ai_service import AiService
 import sys
 import threading
 import queue
@@ -42,6 +43,7 @@ def check_queue():
                 threading.Thread(target=camera, daemon=True).start()
             elif action == "ai":
                 window.switch_to("ai_screen")
+                AiService
     except queue.Empty:
         pass
 
