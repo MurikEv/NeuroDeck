@@ -4,8 +4,6 @@ import cv2
 import sys
 
 def camera(path="project_data"):
-    
-    # state.hide_frames()
 
     cap = cv2.VideoCapture(0)
     if not cap.isOpened():

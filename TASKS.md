@@ -112,8 +112,6 @@ Create a simple AI chat module that can work in two modes:
 
 ### Tasks
 
-### Tasks
-
 * [ ] Create AI screen
 * [ ] Create AI service
 * [ ] Add user text input
@@ -166,8 +164,6 @@ Create a stable camera preview and photo capture system.
 * Camera closes cleanly when leaving the mode.
 
 ---
-
-
 
 ## Phase 6 — Files System
 

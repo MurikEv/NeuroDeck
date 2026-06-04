@@ -11,3 +11,15 @@ venv/
 
 Thumbs.db
 .DS_Store
+
+assets/background/ref_menu.png
+assets/btn_photo/ai_btn_photo_orig.png
+assets/btn_photo/browser_btn_photo_orig.png
+assets/btn_photo/calculator_btn_photo_orig.png
+assets/btn_photo/camera_btn_photo_orig.png
+assets/btn_photo/chat_btn_photo_orig.png
+assets/btn_photo/files_btn_photo_orig.png
+assets/btn_photo/notepad_btn_photo_orig.png
+assets/btn_photo/settings_btn_photo_orig.png
+
+test.py

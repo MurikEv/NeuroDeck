@@ -1,6 +1,7 @@
 from PyQt6 import uic
 from PyQt6.QtWidgets import QMainWindow
 from PyQt6.QtGui import QKeyEvent
+import socket
 
 class MainWindow(QMainWindow):
     def __init__(self):

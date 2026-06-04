@@ -138,5 +138,5 @@ border-radius:10px;"""
             self.selected_row = (self.selected_row - 1) % len(self.cards)
             self.selected_col = min(self.selected_col, len(self.cards[self.selected_row]) - 1)
         elif key == Qt.Key.Key_Return:
-            self.cards[self.selected_row][self.selected_col].click()
+            self.cards[self.selected_row][self.selected_col]["button"].click()
         self.highlight()
