@@ -35,7 +35,10 @@ class AiScreen(QObject):
         state.ai_input_text = self.window.ai_input.toPlainText()
 
     def run_ai_request(self, prompt):
-        answer = self.ai_service.ask_ai(prompt)        
+        try:
+            answer = self.ai_service.ask_ai(prompt)        
+        except Exception as error:
+            answer = f"Error: {error}"
         self.ai_answer_queue.put(answer)
     
     def check_ai_queue(self):
@@ -46,10 +49,15 @@ class AiScreen(QObject):
 
         self.window.ai_output.append(f"AI: {answer}\n")
         self.window.ai_send_btn.setEnabled(True)
+        self.status_label()
 
     def send_message(self):
         prompt = self.window.ai_input.toPlainText().strip()
-
+        if not prompt:
+            self.window.ai_output.append("AI: Write something first.\n")
+            self.window.ai_input.clear()
+            return
+        
         self.window.ai_output.append(f"You: {prompt}\n")
         self.window.ai_input.clear()
         self.window.ai_status_label.setText("Thinking...")

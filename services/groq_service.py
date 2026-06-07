@@ -22,8 +22,6 @@ class GroqService:
         )
 
         answer = self.chat_completion.choices[0].message.content
-        if not answer:
-            answer = "no answer from ai"
 
         self.chat_history.append({"role": "assistant", "content": answer})
 
