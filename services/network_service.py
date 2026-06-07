@@ -3,7 +3,7 @@ import threading
 import time
 
 connection = False
-_monitor_started = False
+monitor_started = False
 
 
 def check_internet():
@@ -25,11 +25,11 @@ def is_online():
 
 
 def start_network_monitoring():
-    global _monitor_started
+    global monitor_started
 
-    if _monitor_started:
+    if monitor_started:
         return
 
-    network_thread = threading.Thread(target=monitor_internet, daemon=True)
-    network_thread.start()
-    _monitor_started = True
+    threading.Thread(target=monitor_internet, daemon=True).start()
+
+    monitor_started = True
