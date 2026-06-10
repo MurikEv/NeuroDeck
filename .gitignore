@@ -23,3 +23,4 @@ assets/btn_photo/notepad_btn_photo_orig.png
 assets/btn_photo/settings_btn_photo_orig.png
 
 test.py
+hardware_tests/display_test_working.py
