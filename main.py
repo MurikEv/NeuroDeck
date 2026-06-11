@@ -1,6 +1,7 @@
 from PyQt6.QtWidgets import QApplication
 from PyQt6.QtCore import QTimer
 from main_window import MainWindow
+from screens.keyboard_controller import KeyboardController
 from screens.ai_screen import AiScreen
 from screens.menu_screen import MainMenu
 from screens.calculator_screen import Calculator
@@ -13,22 +14,35 @@ import queue
 import keyboard
 import state
 
-
+    # --- Creating main window --- #
 
 app = QApplication(sys.argv)
 window = MainWindow()
 state.main_window = window
 window.show()
 
-ai = AiScreen(window)
+    # --- Screens --- #
+
 menu = MainMenu(window)
 window.menu_controller = menu
+
+virtual_keyboard = KeyboardController(window)
+window.keyboard_controller = virtual_keyboard
+
+ai = AiScreen(window)
+window.keyboard_controller = ai
+
 calculator = Calculator(window)
 window.calculator_controller = calculator
 
+
+# --- Network --- #
 network_service.start_network_monitoring()
 
+
 keyboard.add_hotkey("q", lambda: state.ui_queue.put(("menu", None)))
+
+# --- Screen switcher (queue) --- #
 
 def check_queue():
     try:
