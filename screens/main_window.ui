@@ -44,7 +44,7 @@
      <string notr="true"/>
     </property>
     <property name="currentIndex">
-     <number>0</number>
+     <number>2</number>
     </property>
     <widget class="QWidget" name="ai_screen">
      <widget class="QTextEdit" name="ai_input">
@@ -881,7 +881,47 @@ background-color: white;</string>
       </widget>
      </widget>
     </widget>
-    <widget class="QWidget" name="camera_screen"/>
+    <widget class="QWidget" name="camera_screen">
+     <widget class="QLabel" name="camera_preview">
+      <property name="geometry">
+       <rect>
+        <x>0</x>
+        <y>0</y>
+        <width>480</width>
+        <height>320</height>
+       </rect>
+      </property>
+      <property name="text">
+       <string/>
+      </property>
+     </widget>
+     <widget class="QPushButton" name="camera_back_btn">
+      <property name="geometry">
+       <rect>
+        <x>310</x>
+        <y>230</y>
+        <width>141</width>
+        <height>71</height>
+       </rect>
+      </property>
+      <property name="text">
+       <string>MENU</string>
+      </property>
+     </widget>
+     <widget class="QPushButton" name="camera_capture_btn">
+      <property name="geometry">
+       <rect>
+        <x>160</x>
+        <y>220</y>
+        <width>140</width>
+        <height>81</height>
+       </rect>
+      </property>
+      <property name="text">
+       <string/>
+      </property>
+     </widget>
+    </widget>
     <widget class="QWidget" name="browser_screen"/>
     <widget class="QWidget" name="notepad_screen"/>
     <widget class="QWidget" name="fileexplorer_screen"/>
@@ -3609,6 +3649,8 @@ p, li { white-space: pre-wrap; }
      </widget>
     </widget>
    </widget>
+   <zorder>keyboard_frame</zorder>
+   <zorder>stackedWidget</zorder>
   </widget>
  </widget>
  <resources/>

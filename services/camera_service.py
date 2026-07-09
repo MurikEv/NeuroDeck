@@ -1,49 +1,39 @@
-from state import stop_camera
-import state
 import cv2
-import sys
 
-def camera(path="project_data"):
 
-    cap = cv2.VideoCapture(0)
-    if not cap.isOpened():
-        raise RuntimeError("Camera not available")
+class CameraService:
+    def __init__(self, camera_index=0):
+        self.camera_index = camera_index
+        self.cap = None
 
-    capture_requested = False
-    quit_requested = False
+    def open_camera(self):
+        if self.cap is not None and self.cap.isOpened():
+            return True
 
-    def request_capture():
-        nonlocal capture_requested
-        capture_requested = True
-    
-    while True:
-        if stop_camera.is_set():
-            cap.release()
-            cv2.destroyAllWindows()
+        self.cap = cv2.VideoCapture(self.camera_index)
+        if not self.cap.isOpened():
+            self.release_camera()
+            return False
+
+        return True
+
+    def read_frame(self):
+        if self.cap is None or not self.cap.isOpened():
             return None
 
-        cap.grab()
-        if stop_camera.is_set():
-            cap.release()
-            cv2.destroyAllWindows()
-            return None
-        ret, frame = cap.retrieve()
+        ret, frame = self.cap.read()
         if not ret:
-            continue
-        cv2.imshow("VisionCalc Camera", frame)
+            return None
 
-        if capture_requested:
-            cv2.imwrite(path, frame)
-            break
+        return frame
 
-        if quit_requested:
-            cap.release()
-            cv2.destroyAllWindows()
-            sys.exit()
+    def capture_photo(self, frame):
+        if frame is None:
+            return None
 
-        cv2.waitKey(1)
-    
-    cap.release()
-    cv2.destroyAllWindows()
+        return frame.copy()
 
-    return path
+    def release_camera(self):
+        if self.cap is not None:
+            self.cap.release()
+            self.cap = None

@@ -31,3 +31,8 @@ class MainWindow(QMainWindow):
             self.ai_controller.handle_key(event)
         elif current_screen == self.calculator_screen and self.calculator_controller is not None:
             self.calculator_controller.handle_key(event)
+
+    def closeEvent(self, event):
+        if getattr(self, "camera_controller", None) is not None:
+            self.camera_controller.stop()
+        super().closeEvent(event)

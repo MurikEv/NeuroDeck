@@ -5,11 +5,10 @@ from screens.keyboard_controller import KeyboardController
 from screens.ai_screen import AiScreen
 from screens.menu_screen import MainMenu
 from screens.calculator_screen import Calculator
-from services.camera_service import camera
+from screens.camera_screen import CameraScreen
 from services import network_service
 from services.ai_service import AiService
 import sys
-import threading
 import queue
 import keyboard
 import state
@@ -30,10 +29,13 @@ virtual_keyboard = KeyboardController(window)
 window.keyboard_controller = virtual_keyboard
 
 ai = AiScreen(window)
-window.keyboard_controller = ai
+window.ai_controller = ai
 
 calculator = Calculator(window)
 window.calculator_controller = calculator
+
+camera_controller = CameraScreen(window)
+window.camera_controller = camera_controller
 
 
 # --- Network --- #
@@ -49,13 +51,16 @@ def check_queue():
         while True:
             action, data = state.ui_queue.get_nowait()
             if action == "menu":
+                camera_controller.stop()
                 window.switch_to("menu_screen")       #  _screen load from .ui
             elif action == "calculator":
+                camera_controller.stop()
                 window.switch_to("calculator_screen")
             elif action == "camera":
-                state.stop_camera.clear()
-                threading.Thread(target=camera, daemon=True).start()
+                window.switch_to("camera_screen")
+                camera_controller.start()
             elif action == "ai":
+                camera_controller.stop()
                 window.switch_to("ai_screen")
                 AiService
     except queue.Empty:
