@@ -6,6 +6,7 @@ from screens.ai_screen import AiScreen
 from screens.menu_screen import MainMenu
 from screens.calculator_screen import Calculator
 from screens.camera_screen import CameraScreen
+from screens.fileexplorer_screen import FileExplorerScreen
 from services import network_service
 from services.ai_service import AiService
 import sys
@@ -37,6 +38,9 @@ window.calculator_controller = calculator
 camera_controller = CameraScreen(window)
 window.camera_controller = camera_controller
 
+fileexplorer_controller = FileExplorerScreen(window)
+window.fileexplorer_controller = fileexplorer_controller
+
 
 # --- Network --- #
 network_service.start_network_monitoring()
@@ -62,7 +66,11 @@ def check_queue():
             elif action == "ai":
                 camera_controller.stop()
                 window.switch_to("ai_screen")
+                window.ai_input.setFocus()
                 AiService
+            elif action == "fileexplorer":
+                camera_controller.stop()
+                window.switch_to("fileexplorer_screen")
     except queue.Empty:
         pass
 

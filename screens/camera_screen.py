@@ -13,6 +13,7 @@ class CameraScreen(QObject):
         self.camera_service = CameraService()
         self.current_frame = None
         self.captured_frame = None
+        self.last_saved_photo_path = None
         self.is_active = False
 
         self.preview_timer = QTimer(self)
@@ -58,6 +59,7 @@ class CameraScreen(QObject):
             return
 
         self.preview_timer.stop()
+        self.last_saved_photo_path = self.camera_service.save_photo(self.captured_frame)
         self.show_frame(self.captured_frame)
         QTimer.singleShot(500, self.resume_preview)
 

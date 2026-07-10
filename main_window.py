@@ -15,6 +15,7 @@ class MainWindow(QMainWindow):
         self.keyboard_controller = None
         self.ai_controller = None
         self.calculator_controller = None
+        self.fileexplorer_controller = None
         self.ai_controller = None
 
 
@@ -27,10 +28,10 @@ class MainWindow(QMainWindow):
         current_screen = self.stackedWidget.currentWidget()
         if current_screen == self.menu_screen and self.menu_controller is not None:
             self.menu_controller.handle_key(event)
-        elif current_screen == self.ai_screen and self.ai_controller is not None:
-            self.ai_controller.handle_key(event)
         elif current_screen == self.calculator_screen and self.calculator_controller is not None:
             self.calculator_controller.handle_key(event)
+        else:
+            super().keyPressEvent(event)
 
     def closeEvent(self, event):
         if getattr(self, "camera_controller", None) is not None:

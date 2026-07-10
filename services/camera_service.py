@@ -1,3 +1,6 @@
+from datetime import datetime
+from pathlib import Path
+
 import cv2
 
 
@@ -32,6 +35,25 @@ class CameraService:
             return None
 
         return frame.copy()
+
+    def save_photo(self, frame, folder_path="data/camera_pictures"):
+        if frame is None:
+            return None
+
+        folder = Path(folder_path)
+        folder.mkdir(parents=True, exist_ok=True)
+
+        timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+        file_path = folder / f"{timestamp}.jpg"
+        counter = 1
+        while file_path.exists():
+            file_path = folder / f"{timestamp}_{counter}.jpg"
+            counter += 1
+
+        if not cv2.imwrite(str(file_path), frame):
+            return None
+
+        return file_path
 
     def release_camera(self):
         if self.cap is not None:
