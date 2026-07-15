@@ -1,600 +1,323 @@
 # NeuroDeck Architecture
 
-## 1. Project Overview
+This document describes the architecture that exists in the repository today. Planned improvements are listed separately in `TASKS.md`.
 
-NeuroDeck is a portable AI assistant system designed to run as a small desktop-style interface on compact hardware.
+## 1. System Overview
 
-The project is built around multiple independent screens:
+NeuroDeck is a single-window PyQt6 application. `MainWindow` loads one Qt Designer file containing the primary pages, and a `QStackedWidget` selects the visible page.
 
-* Main menu
-* Calculator
-* Camera
-* AI assistant
-* File viewer
-* Notes
-* Browser / online tools in the future
+The current application is divided into four practical areas:
 
-The main goal of the architecture is to keep every part of the system separated, so the project does not become one large script with mixed UI, camera logic, AI logic, and state management.
+1. Application bootstrap and routing in `main.py` and `main_window.py`.
+2. Screen-specific interaction modules in `screens/`.
+3. External and reusable operations in `services/`.
+4. Small shared state in `state.py`.
 
----
+This is a screen-oriented architecture, not a strict MVC implementation.
 
-## 2. Main Architecture Idea
-
-NeuroDeck uses a screen-based architecture.
-
-The application has one main window.
-Different screens are shown or hidden inside this window.
-
-Each screen is responsible only for its own interface and user interaction.
-
-External logic such as camera access, AI API calls, file saving, and data processing should be placed inside service modules.
-
-This keeps the project easier to debug, test, and extend.
-
----
-
-## 3. Project Structure
+## 2. Project Structure
 
 ```text
 NeuroDeck/
-│
-├── main.py
-├── state.py
-├── README.md
-├── ARCHITECTURE.md
-├── TASKS.md
-├── requirements.txt
-├── .gitignore
-├── .env.example
-├── .env
-│
-├── screens/
-│   ├── __init__.py
-│   ├── menu_screen.py
-│   ├── keyboard_controller.py
-│   ├── ai_screen.py
-│   ├── calculator_screen.py
-│   ├── camera_screen.py
-│   ├── file_explorer_screen.py
-│   └── main_window.ui
-│
-├── services/
-│   ├── __init__.py
-│   ├── ai_service.py
-│   ├── groq_service.py
-│   ├── camera_service.py
-│   └── network_service.py
-│
-├── assets/
-│   ├── background/
-│   └── btn_photo/
-│
-└── data/
-    ├── ai_memory/
-    └── camera_pictures/
+|-- main.py
+|-- main_window.py
+|-- state.py
+|-- requirements.txt
+|-- README.md
+|-- ARCHITECTURE.md
+|-- TASKS.md
+|
+|-- screens/
+|   |-- main_window.ui
+|   |-- menu_screen.py
+|   |-- keyboard_controller.py
+|   |-- ai_screen.py
+|   |-- calculator_screen.py
+|   |-- camera_screen.py
+|   `-- file_explorer_screen.py
+|
+|-- services/
+|   |-- ai_service.py
+|   |-- groq_service.py
+|   |-- camera_service.py
+|   `-- network_service.py
+|
+|-- assets/
+|   |-- background/
+|   `-- btn_photo/
+|
+`-- data/
+    |-- ai_memory/
+    `-- camera_pictures/
 ```
 
----
+## 3. Naming and Folder Meaning
 
-## 4. File Responsibilities
+The `screens/` directory is a feature-oriented UI layer. It contains both the Qt Designer view and Python modules associated with individual screens.
+
+The Python classes use the `Controller` suffix when they do not represent a QWidget themselves. A controller receives the main window, connects signals, handles user interaction, calls services, and updates existing widgets.
+
+Examples:
+
+- `screens/ai_screen.py` contains `AIController`.
+- `screens/camera_screen.py` contains `CameraController` and `CameraWorker`.
+- `screens/file_explorer_screen.py` contains `FileExplorerController`.
+- `ImageViewerScreen` keeps the `Screen` suffix because it is an actual QWidget.
+
+Instance names follow the same convention:
+
+```python
+menu_controller
+keyboard_controller
+ai_controller
+calculator_controller
+camera_controller
+file_explorer_controller
+```
+
+Names loaded from `main_window.ui`, such as `menu_screen` and `fileexplorer_screen`, remain view object names.
+
+## 4. Bootstrap and Routing
 
 ### `main.py`
 
-Application entry point.
+`main.py` currently performs all startup work at module level:
 
-Responsibilities:
+- Creates `QApplication` and `MainWindow`.
+- Creates each screen controller.
+- Stores controller references on `MainWindow`.
+- Starts network monitoring.
+- Registers the global `Q` hotkey.
+- Polls `state.ui_queue` with a Qt timer.
+- Switches the active page according to queued actions.
 
-* Create the main application window
-* Initialize global application state
-* Open the first screen
+Current routed actions are:
 
-`main.py` should stay small.
-It should not contain camera logic, AI logic, or full screen code.
+- `menu`
+- `calculator`
+- `camera`
+- `ai`
+- `file_explorer`
 
----
+Browser, Notepad, Messenger, and Settings actions are produced by the menu but are not handled by the router yet.
 
-### `state.py`
+### `main_window.py`
 
-Stores shared application state.
+`MainWindow` is the root QWidget owner. It:
 
-Possible responsibilities:
+- Loads `screens/main_window.ui`.
+- Hides the on-screen keyboard initially.
+- Selects the menu page.
+- Stores controller references.
+- Forwards key events to the active Menu or Calculator controller.
+- Stops the camera controller during window close.
 
-* Reference to the main root window
-* Current active screen
-* Shared configuration
-* Paths to data folders
-* Current mode
-* Last AI answer
-* Last captured image path
+`switch_to(screen_name)` resolves a QWidget by its Qt object name and selects it in the stacked widget.
 
-This file exists to avoid passing the same objects through too many functions.
+## 5. Screen Modules
 
-Example state values:
+### Menu
 
-```text
-root_window
-current_screen
-last_photo_path
-last_ai_answer
-```
+`MenuController` owns the menu selection coordinates and card metadata. It applies highlight styles, handles arrow keys and Return, and queues mode actions.
 
----
+It does not perform camera, AI, or file operations directly.
 
-## 5. Screens Layer
+### On-Screen Keyboard
 
-The `screens/` folder contains UI definitions and screen-specific controllers.
+`KeyboardController` is shared UI behavior rather than a standalone page. It mirrors text between the keyboard input widget and the active AI input widget, handles virtual key buttons, and shows or hides the keyboard frame.
 
-Each screen module should handle:
+The current implementation supports only the AI text input.
 
-* Connecting its screen widgets
-* Handling user input for that screen
-* Calling services when needed
+### Calculator
 
-Screen modules should not directly contain heavy logic.
+`CalculatorController` connects calculator buttons, stores the expression string, updates the display, and evaluates the expression.
 
----
+Expression evaluation is currently inside the controller and uses `eval()`. A future parser or calculator service should own restricted expression evaluation.
 
-### `screens/menu_screen.py`
+### AI
 
-Main navigation screen.
+`AIController` connects Send and Clear actions, owns the response queue and Qt polling timers, starts background requests, and updates the chat widgets.
 
-Responsibilities:
+It delegates online/offline selection to `AIService`.
 
-* Display available modes
-* Allow navigation using buttons, arrows, or keyboard
-* Open selected screen
+### Camera
 
-Menu options:
+`CameraController` owns screen-level camera state and preview behavior. `CameraWorker` is a `QThread` that repeatedly asks `CameraService` for frames and emits them to the UI thread.
 
-* AI
-* Camera
-* Calculator
-* Browser
-* Notes
-* Files
-* Messenger
+Photo copying and saving are delegated to `CameraService`, although saving is currently initiated from the UI thread.
 
-The menu should not process AI, open the camera directly, or manage files by itself.
-It should only navigate to the correct screen.
+### File Explorer
 
----
+`FileExplorerController` loads directory entries into the table and opens supported images. It also creates `ImageViewerScreen` programmatically and adds it to the existing stacked widget.
 
-### `screens/calculator_screen.py`
+Directory scanning and image decoding currently run in the UI thread.
 
-Calculator interface.
+## 6. Services
 
-Responsibilities:
+### `AIService`
 
-* Display calculator input
-* Handle keyboard input
-* Evaluate simple expressions
-* Show result
+`AIService` selects between online and offline behavior:
 
-Supported operations:
+- Online: forwards the prompt to `GroqService`.
+- Offline: returns a fixed placeholder response.
 
-* Addition
-* Subtraction
-* Multiplication
-* Division
-* Brackets
-* Powers
-* Square root
+It also resets Groq chat history when Clear is requested.
 
-The calculator controller should not control the main menu or AI logic.
+### `GroqService`
 
----
+`GroqService` loads environment variables, creates the Groq client, stores chat history, sends text completion requests, and returns response text.
 
-### `screens/camera_screen.py`
+The current model is `llama-3.1-8b-instant`.
 
-Camera interface.
+### `CameraService`
 
-Responsibilities:
+`CameraService` owns the OpenCV `VideoCapture`, reads frames, copies captured frames, saves JPEG files, and releases the camera.
 
-* Show camera preview
-* Capture photo
-* Save photo
-* Send photo to AI if required
+The default camera index is `0` and the default output directory is `data/camera_pictures/`.
 
-This controller should use `camera_service.py` for camera operations.
+### `network_service`
 
----
+The network service is a module-level singleton implemented with globals and a daemon thread. It tests connectivity, stores the last status, and exposes start, stop, and status functions.
 
-### `screens/ai_screen.py`
+Connectivity currently means that a TCP connection to `1.1.1.1:53` succeeds.
 
-AI answer screen.
+## 7. Shared State
 
-Responsibilities:
+`state.py` currently contains:
 
-* Display AI output
-* Allow scrolling through long answers
-* Keep the answer visible after switching modes
-* Possibly allow asking follow-up questions in the future
+- `ui_queue`: cross-component navigation queue.
+- `stop_camera`: an unused camera stop event.
+- `main_window`: a global reference assigned during startup.
+- `ai_input_text`: an unused shared AI input value.
 
-This controller should not directly call the API.
-It should use `ai_service.py`.
+Controller references also live on `MainWindow`, while network state lives in `network_service`. This means shared state is currently distributed across several locations.
 
----
+## 8. Runtime Flows
 
-## 6. Services Layer
-
-The `services/` folder contains logic that does work outside the UI.
-
-Services should be reusable.
-
----
-
-### `services/camera_service.py`
-
-Responsible for camera operations.
-
-Responsibilities:
-
-* Open camera
-* Capture frame
-* Save image
-* Return image path
-
-Possible functions:
+### Navigation
 
 ```text
-capture_photo()
-save_frame()
-open_camera()
-release_camera()
+Button, key, or hotkey
+        |
+        v
+state.ui_queue receives (action, payload)
+        |
+        v
+process_ui_queue() in main.py
+        |
+        v
+MainWindow.switch_to(Qt object name)
 ```
 
----
+Camera start and stop are additional side effects performed by the router when entering or leaving Camera mode.
 
-### `services/ai_service.py`
-
-Responsible for AI communication.
-
-Responsibilities:
-
-* Load API key
-* Encode image
-* Send request to AI model
-* Return text answer
-* Handle API errors
-
-Possible functions:
+### AI Request
 
 ```text
-encode_image()
-ask_ai_with_image()
-ask_ai_text()
+AI Send button
+        |
+        v
+AIController reads and displays the prompt
+        |
+        v
+Background threading.Thread
+        |
+        v
+AIService -> GroqService or offline placeholder
+        |
+        v
+response_queue
+        |
+        v
+Qt timer updates the chat output
 ```
 
-The UI should only receive the final answer.
-It should not know the details of API requests.
-
----
-
-## 7. Data Flow
-
-### Camera AI Flow
+### Camera Preview and Capture
 
 ```text
-User opens Camera screen
-        ↓
-Camera screen shows preview
-        ↓
-User captures image
-        ↓
-camera_service saves image
-        ↓
-ai_service sends image to AI model
-        ↓
-AI returns answer
-        ↓
-AI screen displays answer
+Camera route
+        |
+        v
+CameraController starts CameraWorker
+        |
+        v
+CameraService opens and reads the camera
+        |
+        v
+frame_ready signal
+        |
+        v
+CameraController converts and displays the frame
+
+Capture button -> frame copy -> JPEG save -> temporary paused preview
 ```
 
----
-
-### Calculator Flow
+### File Explorer
 
 ```text
-User opens Calculator screen
-        ↓
-Calculator screen receives key input
-        ↓
-Expression is updated
-        ↓
-User presses Enter
-        ↓
-Expression is evaluated
-        ↓
-Result is shown on screen
+AI Memory or Pictures button
+        |
+        v
+FileExplorerController scans the selected directory
+        |
+        v
+Rows are added to the table
+        |
+        v
+Double-click supported image
+        |
+        v
+ImageViewerScreen
 ```
-
----
-
-### Menu Flow
-
-```text
-User opens NeuroDeck
-        ↓
-Menu screen appears
-        ↓
-User selects mode
-        ↓
-Current screen is hidden or destroyed
-        ↓
-Selected screen is displayed
-```
-
----
-
-## 8. Screen Management
-
-Only one main root window should exist.
-
-Correct approach:
-
-```text
-One root window
-Multiple frames
-Show one frame at a time
-Hide or destroy old frame
-```
-
-Wrong approach:
-
-```text
-Creating many Tk() windows
-Mixing mainloop() in every screen
-Running multiple UI loops
-```
-
-Recommended rule:
-
-* `tk.Tk()` should be created once in `main.py`
-* Screens should use `tk.Frame`
-* Each screen should be packed, hidden, or destroyed as needed
-
----
 
 ## 9. Threading Model
 
-Long-running tasks should not block the UI.
+The application currently uses three background-work patterns:
 
-Examples of long tasks:
+| Component | Mechanism | UI result path |
+|---|---|---|
+| Camera | `QThread` subclass | Qt signal |
+| AI | daemon `threading.Thread` | Python queue plus Qt timer |
+| Network | daemon `threading.Thread` | shared module state polled by UI |
 
-* Camera capture loop
-* AI request
-* File loading
-* Image processing
+Only the main Qt thread should modify widgets.
 
-Recommended approach:
+Known lifecycle risks include camera stop during device opening, network stop after a join timeout, and AI requests that cannot be cancelled during shutdown.
 
-```text
-UI thread:
-- Qt window
-- Button events
-- Keyboard events
+## 10. Runtime Data and Configuration
 
-Worker thread:
-- Camera processing
-- AI request
-- Slow operations
+- Online AI key: `.env`, variable `GROQ_API_KEY`.
+- Camera pictures: `data/camera_pictures/`.
+- Planned AI history files: `data/ai_memory/`.
+- UI definition: `screens/main_window.ui`.
+- Visual assets: `assets/background/` and `assets/btn_photo/`.
 
-Queue:
-- Sends results back to UI thread
-```
+Several paths are relative to the process working directory, so the application currently must be launched from the repository root.
 
----
+## 11. Current Technical Debt
 
-## 10. Keyboard Input
+The highest-priority architecture and reliability issues are:
 
-Keyboard handling should be centralized as much as possible.
+1. Replace calculator `eval()` with a restricted evaluator.
+2. Fix camera and network shutdown races.
+3. Replace or scope the global `Q` hotkey and unregister it on exit.
+4. Add AI request timeout, cancellation, and safe history synchronization.
+5. Move blocking file and image work away from the UI thread where needed.
+6. Replace stringly typed routes with a defined routing contract.
+7. Resolve paths from the project directory rather than the working directory.
+8. Remove unused shared state and clarify ownership.
+9. Add automated tests for services and lifecycle behavior.
 
-Recommended rule:
+## 12. Extension Rules
 
-* Use global hotkeys only for system-level actions such as opening menu or exiting
+When adding a new mode:
 
----
+1. Add or reuse a page in `main_window.ui`.
+2. Add a screen module under `screens/`.
+3. Use a `Controller` class when the object manages existing widgets rather than being a QWidget itself.
+4. Put reusable hardware, API, storage, or domain operations under `services/`.
+5. Register the controller in `main.py` and on `MainWindow`.
+6. Add an explicit route and lifecycle behavior.
+7. Add focused tests before marking the mode complete.
 
-## 11. Hardware Direction
-
-Target hardware:
-
-* Small single-board computer
-* Small display
-* Camera module
-* Battery power
-* Physical buttons or calculator keypad
-
-The current software should first work on a laptop.
-After that, it can be moved to hardware.
-
-Development stages:
-
-```text
-Laptop prototype
-        ↓
-Small screen UI test
-        ↓
-Camera module test
-        ↓
-Physical buttons test
-        ↓
-Battery-powered prototype
-        ↓
-Calculator-style enclosure
-```
-
----
-
-## 12. Current Development Priority
-
-Current priority is not perfect hardware.
-
-Current priority:
-
-1. Stable screen switching
-2. Clean project structure
-3. Working calculator screen
-4. Working camera capture
-5. Working AI image answer
-6. Scrollable AI answer screen
-7. Saving photos and answers
-8. Preparing for hardware buttons
-
----
-
-## 13. Important Architecture Rules
-
-### Rule 1: UI and logic must be separated
-
-Bad:
-
-```text
-Button directly contains camera + AI + file saving + display logic
-```
-
-Good:
-
-```text
-Button calls screen method
-Screen calls service
-Service returns result
-Screen displays result
-```
-
----
-
-### Rule 2: One file should not do everything
-
-Bad:
-
-```text
-main.py contains menu, calculator, camera, AI, file saving, API calls
-```
-
-Good:
-
-```text
-main.py starts app
-menu_controller.py handles menu
-calculator_controller.py handles calculator
-camera_service.py handles camera
-ai_service.py handles AI
-```
-
----
-
-### Rule 3: One root window
-
-Bad:
-
-```text
-Every screen creates tk.Tk()
-```
-
-Good:
-
-```text
-main.py creates one tk.Tk()
-Every screen creates tk.Frame()
-```
-
----
-
-### Rule 4: Do not block the UI
-
-Bad:
-
-```text
-AI request runs directly inside button command
-UI freezes
-```
-
-Good:
-
-```text
-Button starts worker thread
-Worker sends result to queue
-UI displays result
-```
-
----
-
-## 14. Future Architecture
-
-Later, NeuroDeck can be extended into a more serious system.
-
-Possible future modules:
-
-```text
-core/
-├── app.py
-├── router.py
-├── state.py
-└── config.py
-
-screens/
-├── base_screen.py
-├── menu_screen.py
-├── calculator_screen.py
-├── camera_screen.py
-├── ai_screen.py
-├── notes_screen.py
-└── file_explorer_screen.py
-
-services/
-├── ai_service.py
-├── camera_service.py
-├── storage_service.py
-├── speech_service.py
-└── network_service.py
-```
-
-This should not be built immediately.
-The current goal is to keep the project simple but ready for growth.
-
----
-
-## 15. Engineering Goal
-
-The goal of NeuroDeck is not only to build a device.
-
-The goal is to learn real engineering through one project:
-
-* UI architecture
-* File structure
-* Camera handling
-* AI API integration
-* Local-first design
-* Hardware integration
-* Debugging
-* Git workflow
-* Documentation
-* Project finishing
-
-NeuroDeck should become a portfolio project that shows practical system-building ability, not just copied code.
-
----
-
-## 16. Next Milestone
-
-The next milestone is:
-
-```text
-A clean multi-screen desktop prototype
-```
-
-Required features:
-
-* Main menu works
-* Arrow navigation works
-* Enter opens selected mode
-* Calculator screen works
-* Camera screen opens
-* AI answer screen displays text
-* User can return to menu
-* Code is split into files
-* README and architecture documentation exist
-
-```
-```
+Avoid adding another architectural layer until it removes real complexity from the current code.

@@ -1,3 +1,5 @@
-opencv-python
-keyboard
-PyQt6
+PyQt6==6.11.0
+groq==1.4.0
+keyboard==0.13.5
+opencv-python==4.13.0.92
+python-dotenv==1.2.2

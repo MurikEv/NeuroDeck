@@ -1,260 +1,164 @@
 # NeuroDeck
 
-NeuroDeck is a portable AI assistant system built with Python.
+NeuroDeck is an early MVP of a compact, multi-mode desktop assistant written in Python and PyQt6. The long-term target is a small single-board computer with a display, camera, physical controls, and optional online AI access.
 
-The goal of this project is to create a small device-style interface with multiple modes, including menu navigation, calculator mode, camera mode, and AI-powered image answering.
+The repository is currently a learning and prototyping project. Features marked as implemented below exist in the current code, but several stability and lifecycle issues are still tracked in `TASKS.md`.
 
-This project is also a learning project focused on software engineering, UI architecture, hardware integration, and AI engineering.
+## Current Functionality
 
-## Current Status
+Implemented:
 
-The project is in early MVP development.
+- Main menu with arrow-key navigation, selection highlighting, and Return to open a mode.
+- Calculator UI with button input, basic arithmetic, decimal points, and parentheses.
+- Text-only AI chat through the Groq API when the network monitor reports an online connection.
+- Static offline response when no network connection is reported.
+- On-screen keyboard connected to the AI text input.
+- Camera preview, JPEG capture, and storage in `data/camera_pictures/`.
+- File explorer for AI-memory and camera-picture folders.
+- Image viewer for supported image files.
+- Background network monitoring and an Online/Offline status label.
 
-Currently implemented or being developed:
+Partial or placeholder functionality:
 
-* Main menu interface
-* Keyboard navigation between menu buttons
-* Calculator screen
-* Camera screen prototype
-* AI image question answering prototype
-* Basic multi-screen structure using Qt Designer and PyQt6
-* Early hardware planning for Radxa Zero 3 / Raspberry Pi-style SBC
-
-## Planned Features
-
-### Offline Modes
-
-* Main menu
-* Calculator
-* Camera
-* Simple AI chat
-* Notes
-* Files / saved answers
-* Local AI support in the future
-
-### Online Modes
-
-* Browser
-* ChatGPT / external AI API
-* Messenger-style interface
+- Browser, Notepad, Messenger, and Settings appear in the menu but do not have implemented routes.
+- Offline AI is a placeholder response, not a local model.
+- AI answers are not saved to `data/ai_memory/`.
+- The file explorer can display directories and non-image files but only opens supported images.
+- Camera images cannot yet be sent to the AI mode.
+- Calculator keyboard input, percent, power, and square root are not implemented.
 
 ## Project Structure
 
 ```text
 NeuroDeck/
-│
-├── main.py
-├── main_window.py
-├── state.py
-│
-├── screens/
-│   ├── __init__.py
-│   ├── menu_screen.py
-│   ├── keyboard_controller.py
-│   ├── ai_screen.py
-│   ├── calculator_screen.py
-│   ├── camera_screen.py
-│   ├── file_explorer_screen.py
-│   └── main_window.ui
-│
-├── services/
-│   ├── __init__.py
-│   ├── ai_service.py
-│   ├── groq_service.py
-│   ├── camera_service.py
-│   └── network_service.py
-│
-├── data/
-│   ├── ai_memory/
-│   └── camera_pictures/
-│
-└── assets/
-    ├── background/
-    └── btn_photo/
+|-- main.py
+|-- main_window.py
+|-- state.py
+|-- requirements.txt
+|-- README.md
+|-- ARCHITECTURE.md
+|-- TASKS.md
+|
+|-- screens/
+|   |-- main_window.ui
+|   |-- menu_screen.py
+|   |-- keyboard_controller.py
+|   |-- ai_screen.py
+|   |-- calculator_screen.py
+|   |-- camera_screen.py
+|   `-- file_explorer_screen.py
+|
+|-- services/
+|   |-- ai_service.py
+|   |-- groq_service.py
+|   |-- camera_service.py
+|   `-- network_service.py
+|
+|-- assets/
+|   |-- background/
+|   `-- btn_photo/
+|
+`-- data/
+    |-- ai_memory/
+    `-- camera_pictures/
 ```
 
-## Main Idea
+The `screens/` directory contains the Qt Designer file and the Python modules responsible for screen-specific interaction. Their main classes use the `Controller` suffix because they connect existing widgets, react to events, call services, and update the UI.
 
-NeuroDeck works like a small portable terminal.
+The `services/` directory contains camera, network, and AI integration code that should remain independent from specific widgets.
 
-The user can open the main menu, choose a mode, use the camera, calculate expressions, or send images to an AI model for analysis.
-
-The final target is to run the system on a small single-board computer with a small display, camera, buttons, and battery.
+See [ARCHITECTURE.md](ARCHITECTURE.md) for the current component boundaries and data flows.
 
 ## Controls
 
-Current planned controls:
+|       Input        |                   Current behavior                   |
+|--------------------|------------------------------------------------------|
+|     Arrow keys     |               Move through menu items                |
+|       Return       |             Open the selected menu item              |
+|         Q          | Queue a return to the menu through the global hotkey |
+|   Mouse or touch   |               Activate visible buttons               |
+| On-screen keyboard |            Enter text in the AI input field          |
 
-| Key         | Action                       |
-| ----------- | ---------------------------- |
-| Q           | Open menu                    |
-| Arrow Right | Move selection right  MENU       |
-| Arrow Left  | Move selection left          |
-| Arrow Up    | Move selection up            |
-| Arrow Down  | Move selection down          |
-| Enter       | Open selected mode           |
-| Esc         | Exit program                 |
+The global `Q` binding is temporary. It also reacts while typing a physical `q` and may require elevated input-device permissions on Linux.
 
 ## Modes
 
 ### Menu
 
-The central screen of the system.
-It allows the user to choose between available modes.
+`MenuController` manages the selection coordinates, visual highlight, and mode actions. AI, Calculator, Camera, and Files currently have working routes. The other menu entries are placeholders.
 
 ### Calculator
 
-A simple calculator interface designed to look like a small device display.
+`CalculatorController` connects calculator buttons and maintains the displayed expression. Evaluation currently uses Python `eval()`, which is temporary and must be replaced with a restricted parser before the calculator is considered safe and complete.
 
-Planned functions:
+### AI
 
-* Basic arithmetic
-* Parentheses
-* Powers
-* Square root
-* Cleaner display formatting
+`AIController` sends text prompts through `AIService`. Online requests use `GroqService`; offline requests return a fixed message. Requests run in a background Python thread and answers return to the UI through a queue polled by a Qt timer.
+
+The current AI mode is text-only. Image analysis and a real local model are not implemented.
 
 ### Camera
 
-Camera mode allows the device to preview the camera image and capture a photo.
-
-Planned functions:
-
-* Camera preview
-* Take photo
-* Save photo
-* Send photo to AI mode
-
-### AI Mode
-
-AI mode sends an image or prompt to an AI model and displays the response.
-
-Current prototype uses an external AI API.
-
-Future goal:
-
-* Add local AI support
-* Add better prompt control
-* Add saved answer history
-* Add scrolling for long answers
-
-### Notes
-
-Planned mode for writing notes.
-
-Possible future features:
-
-* Keyboard text input
-* Voice-to-text
-* Saved notes
+`CameraController` starts a `QThread` worker that reads OpenCV frames through `CameraService`. Captured frames are saved as JPEG files in `data/camera_pictures/`.
 
 ### Files
 
-Planned mode for viewing saved images, AI answers, and notes.
-
-## Technologies
-
-Current technologies:
-
-* Python
-* Qt Designer
-* PyQt6
-* OpenCV
-* Groq API
-* threading
-* queue
-* dotenv
-
-Possible future technologies:
-
-* FastAPI
-* PySide6 / Qt
-* Local LLMs
-* Whisper / speech recognition
-* Linux GPIO
-* Touchscreen support
-
-## Hardware Target
-
-Possible hardware:
-
-* Radxa Zero 3
-* Raspberry Pi Zero 2 W
-* Small SPI display
-* Small camera module
-* Calculator-style case
-* Physical buttons
-* Battery module
-
-The project is currently developed and tested on a normal computer first.
-
-## Development Goals
-
-This project is not only about making the device work.
-
-The engineering goals are:
-
-* Build a clean multi-screen architecture
-* Separate UI code from service logic
-* Avoid spaghetti code
-* Learn real debugging
-* Learn project structure
-* Learn hardware/software integration
-* Build a portfolio-level AI engineering project
+`FileExplorerController` lists entries from `data/ai_memory/` and `data/camera_pictures/`. Supported image formats can be opened in the programmatic `ImageViewerScreen`.
 
 ## Installation
 
-Create a virtual environment:
+The current development environment uses Python 3.14. A camera is optional unless Camera mode is being tested.
 
-```bash
+Create and activate a virtual environment on Windows:
+
+```powershell
 python -m venv venv
+venv\Scripts\Activate.ps1
 ```
 
-Activate it on Windows:
+Install runtime dependencies:
 
-```bash
-venv\Scripts\activate
+```powershell
+python -m pip install -r requirements.txt
 ```
 
-Install dependencies:
-
-```bash
-pip install -r requirements.txt
-```
-
-Create a `.env` file:
+Create `.env` in the project root for online AI:
 
 ```env
 GROQ_API_KEY=your_api_key_here
 ```
 
-Run the project:
+Run the application from the project root:
 
-```bash
+```powershell
 python main.py
 ```
 
-## Current Problems / TODO
+Running from another working directory is not currently supported because UI and data paths are relative to the project root.
 
-* Create calculator UI
-* Create calculator logic
+## Runtime Data
 
-## Learning Focus
+- Camera captures are written to `data/camera_pictures/`.
+- AI-memory storage is planned for `data/ai_memory/`, but no writer exists yet.
+- Runtime data directories may be absent in a clean clone and are created only by the code paths that explicitly create them.
 
-This project is used to learn:
+## Known Limitations
 
-* Python project architecture
-* UI systems
-* State management
-* Camera integration
-* AI API integration
-* Local AI concepts
-* Hardware planning
-* GitHub workflow
-* Clean code
+- Camera shutdown and network-monitor shutdown have known thread lifecycle races.
+- AI requests have no application-level cancellation or timeout handling.
+- Clearing AI history during a running request can produce inconsistent history.
+- Network status is based on a connection test to `1.1.1.1:53`, not direct Groq availability.
+- The global `Q` hotkey conflicts with normal text entry.
+- File and image loading run synchronously in the UI thread.
+- Several paths depend on the current working directory.
+- There is no automated test suite yet.
+
+The prioritized fixes are maintained in [TASKS.md](TASKS.md).
+
+## Hardware Direction
+
+The intended hardware is a compact Linux SBC such as a Radxa Zero or Raspberry Pi-class board with a small display, camera, physical controls, and battery power. Experimental SPI/GPIO scripts are not part of the main runtime requirements and must be validated on the target board separately.
 
 ## License
 
-This project is currently private / experimental.
-
-License will be decided later.
+The project is currently private and experimental. No redistribution license has been selected.
