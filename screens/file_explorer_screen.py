@@ -26,7 +26,7 @@ class ImageViewerScreen(QWidget):
         super().resizeEvent(event)
 
 
-class FileExplorerScreen:
+class FileExplorerController:
     image_extensions = {".jpg", ".jpeg", ".png", ".bmp", ".gif"}
 
     def __init__(self, window):
@@ -66,7 +66,7 @@ class FileExplorerScreen:
         self.image_label.setStyleSheet("background-color: black; color: white;")
 
         self.image_back_btn = QPushButton("BACK", self.image_viewer_screen)
-        self.image_back_btn.clicked.connect(self.back_to_fileexplorer)
+        self.image_back_btn.clicked.connect(self.back_to_file_explorer)
 
         self.window.stackedWidget.addWidget(self.image_viewer_screen)
         self.window.image_viewer_screen = self.image_viewer_screen
@@ -201,7 +201,7 @@ class FileExplorerScreen:
 
         self.image_label.setPixmap(canvas)
 
-    def back_to_fileexplorer(self):
+    def back_to_file_explorer(self):
         self.current_pixmap = None
         self.image_label.clear()
         self.window.switch_to("fileexplorer_screen")

@@ -3,6 +3,7 @@ from PyQt6.QtWidgets import QMainWindow
 from PyQt6.QtGui import QKeyEvent
 import socket
 
+
 class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
@@ -15,8 +16,8 @@ class MainWindow(QMainWindow):
         self.keyboard_controller = None
         self.ai_controller = None
         self.calculator_controller = None
-        self.fileexplorer_controller = None
-        self.ai_controller = None
+        self.camera_controller = None
+        self.file_explorer_controller = None
 
 
     def switch_to(self, screen_name):

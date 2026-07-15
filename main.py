@@ -2,13 +2,12 @@ from PyQt6.QtWidgets import QApplication
 from PyQt6.QtCore import QTimer
 from main_window import MainWindow
 from screens.keyboard_controller import KeyboardController
-from screens.ai_screen import AiScreen
-from screens.menu_screen import MainMenu
-from screens.calculator_screen import Calculator
-from screens.camera_screen import CameraScreen
-from screens.fileexplorer_screen import FileExplorerScreen
+from screens.ai_screen import AIController
+from screens.menu_screen import MenuController
+from screens.calculator_screen import CalculatorController
+from screens.camera_screen import CameraController
+from screens.file_explorer_screen import FileExplorerController
 from services import network_service
-from services.ai_service import AiService
 import sys
 import queue
 import keyboard
@@ -21,25 +20,25 @@ window = MainWindow()
 state.main_window = window
 window.show()
 
-    # --- Screens --- #
+    # --- Controllers --- #
 
-menu = MainMenu(window)
-window.menu_controller = menu
+menu_controller = MenuController(window)
+window.menu_controller = menu_controller
 
-virtual_keyboard = KeyboardController(window)
-window.keyboard_controller = virtual_keyboard
+keyboard_controller = KeyboardController(window)
+window.keyboard_controller = keyboard_controller
 
-ai = AiScreen(window)
-window.ai_controller = ai
+ai_controller = AIController(window)
+window.ai_controller = ai_controller
 
-calculator = Calculator(window)
-window.calculator_controller = calculator
+calculator_controller = CalculatorController(window)
+window.calculator_controller = calculator_controller
 
-camera_controller = CameraScreen(window)
+camera_controller = CameraController(window)
 window.camera_controller = camera_controller
 
-fileexplorer_controller = FileExplorerScreen(window)
-window.fileexplorer_controller = fileexplorer_controller
+file_explorer_controller = FileExplorerController(window)
+window.file_explorer_controller = file_explorer_controller
 
 
 # --- Network --- #
@@ -49,11 +48,10 @@ network_service.start_network_monitoring()
 keyboard.add_hotkey("q", lambda: state.ui_queue.put(("menu", None)))
 
 # --- Screen switcher (queue) --- #
-
-def check_queue():
+def process_ui_queue():
     try:
         while True:
-            action, data = state.ui_queue.get_nowait()
+            action, _payload = state.ui_queue.get_nowait()
             if action == "menu":
                 camera_controller.stop()
                 window.switch_to("menu_screen")       #  _screen load from .ui
@@ -67,15 +65,14 @@ def check_queue():
                 camera_controller.stop()
                 window.switch_to("ai_screen")
                 window.ai_input.setFocus()
-                AiService
-            elif action == "fileexplorer":
+            elif action == "file_explorer":
                 camera_controller.stop()
                 window.switch_to("fileexplorer_screen")
     except queue.Empty:
         pass
 
-timer = QTimer()
-timer.timeout.connect(check_queue)
-timer.start(10)
+ui_queue_timer = QTimer()
+ui_queue_timer.timeout.connect(process_ui_queue)
+ui_queue_timer.start(10)
 
 sys.exit(app.exec())

@@ -2,7 +2,7 @@ from PyQt6.QtGui import QKeyEvent
 from PyQt6.QtCore import Qt
 import state
 
-class MainMenu:
+class MenuController:
     def __init__(self, window):
         self.window = window
         self.selected_row = 0
@@ -81,7 +81,7 @@ class MainMenu:
         window.camera_btn.clicked.connect(lambda: state.ui_queue.put(("camera", None)))
         window.browser_btn.clicked.connect(lambda: state.ui_queue.put(("browser", None)))
         window.notepad_btn.clicked.connect(lambda: state.ui_queue.put(("notepad", None)))
-        window.files_btn.clicked.connect(lambda: state.ui_queue.put(("fileexplorer", None)))
+        window.files_btn.clicked.connect(lambda: state.ui_queue.put(("file_explorer", None)))
         window.chat_btn.clicked.connect(lambda: state.ui_queue.put(("messenger", None)))
         window.settings_btn.clicked.connect(lambda: state.ui_queue.put(("settings", None)))
 

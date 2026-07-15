@@ -1,6 +1,6 @@
 from PyQt6.QtCore import Qt
 
-class Calculator:
+class CalculatorController:
     def __init__(self, window):
         self.window = window
 

@@ -50,24 +50,28 @@ NeuroDeck/
 │
 ├── screens/
 │   ├── __init__.py
-│   ├── menu.py
-│   ├── calculator.py
-│   ├── camera.py
-│   └── ai.py
+│   ├── menu_screen.py
+│   ├── keyboard_controller.py
+│   ├── ai_screen.py
+│   ├── calculator_screen.py
+│   ├── camera_screen.py
+│   ├── file_explorer_screen.py
+│   └── main_window.ui
 │
 ├── services/
 │   ├── __init__.py
-│   ├── camera.py
-│   └── ai.py
+│   ├── ai_service.py
+│   ├── groq_service.py
+│   ├── camera_service.py
+│   └── network_service.py
 │
 ├── assets/
-│   ├── icons/
-│   └── backgrounds/
+│   ├── background/
+│   └── btn_photo/
 │
 └── data/
-    ├── photos/
-    ├── answers/
-    └── logs/
+    ├── ai_memory/
+    └── camera_pictures/
 ```
 
 ---
@@ -118,16 +122,15 @@ last_ai_answer
 
 ## 5. Screens Layer
 
-The `screens/` folder contains UI screens.
+The `screens/` folder contains UI definitions and screen-specific controllers.
 
-Each screen should handle:
+Each screen module should handle:
 
-* Creating its own frame
-* Drawing widgets
+* Connecting its screen widgets
 * Handling user input for that screen
 * Calling services when needed
 
-Screens should not directly contain heavy logic.
+Screen modules should not directly contain heavy logic.
 
 ---
 
@@ -177,7 +180,7 @@ Supported operations:
 * Powers
 * Square root
 
-The calculator screen should not control the main menu or AI logic.
+The calculator controller should not control the main menu or AI logic.
 
 ---
 
@@ -192,7 +195,7 @@ Responsibilities:
 * Save photo
 * Send photo to AI if required
 
-This screen should use `camera_service.py` for camera operations.
+This controller should use `camera_service.py` for camera operations.
 
 ---
 
@@ -207,7 +210,7 @@ Responsibilities:
 * Keep the answer visible after switching modes
 * Possibly allow asking follow-up questions in the future
 
-This screen should not directly call the API.
+This controller should not directly call the API.
 It should use `ai_service.py`.
 
 ---
@@ -473,8 +476,8 @@ Good:
 
 ```text
 main.py starts app
-menu_screen.py handles menu
-calculator_screen.py handles calculator
+menu_controller.py handles menu
+calculator_controller.py handles calculator
 camera_service.py handles camera
 ai_service.py handles AI
 ```
@@ -537,7 +540,7 @@ screens/
 ├── camera_screen.py
 ├── ai_screen.py
 ├── notes_screen.py
-└── files_screen.py
+└── file_explorer_screen.py
 
 services/
 ├── ai_service.py

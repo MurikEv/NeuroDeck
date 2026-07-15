@@ -30,13 +30,15 @@ class CameraService:
 
         return frame
 
-    def capture_photo(self, frame):
+    @staticmethod
+    def capture_photo(frame):
         if frame is None:
             return None
 
         return frame.copy()
 
-    def save_photo(self, frame, folder_path="data/camera_pictures"):
+    @staticmethod
+    def save_photo(frame, folder_path="data/camera_pictures"):
         if frame is None:
             return None
 

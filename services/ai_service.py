@@ -1,12 +1,12 @@
 from services.network_service import is_online
 from services.groq_service import GroqService
 
-class AiService:
+class AIService:
     def __init__(self):
         self.groq_service = GroqService()
 
-    def local_ai(self):
-        return "local"
+    def local_ai(self, prompt):
+        return "Offline mode: local AI is not implemented yet."
 
     def ask_ai(self, prompt):
         if not prompt:

@@ -44,27 +44,33 @@ Currently implemented or being developed:
 NeuroDeck/
 │
 ├── main.py
+├── main_window.py
 ├── state.py
 │
 ├── screens/
 │   ├── __init__.py
-│   ├── menu.py
-│   ├── calculator.py
-│   ├── camera.py
-│   └── ai.py
+│   ├── menu_screen.py
+│   ├── keyboard_controller.py
+│   ├── ai_screen.py
+│   ├── calculator_screen.py
+│   ├── camera_screen.py
+│   ├── file_explorer_screen.py
+│   └── main_window.ui
 │
 ├── services/
 │   ├── __init__.py
-│   ├── camera.py
-│   └── ai.py
+│   ├── ai_service.py
+│   ├── groq_service.py
+│   ├── camera_service.py
+│   └── network_service.py
 │
 ├── data/
-│   ├── images/
-│   └── answers/
+│   ├── ai_memory/
+│   └── camera_pictures/
 │
 └── assets/
-    ├── icons/
-    └── backgrounds/
+    ├── background/
+    └── btn_photo/
 ```
 
 ## Main Idea
