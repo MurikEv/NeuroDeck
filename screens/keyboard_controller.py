@@ -16,38 +16,17 @@ class KeyboardController(QObject):
         self.window.keyboard_text_input.textChanged.connect(self.sync_to_active_widget)
 
         # --- Keys --- #
-        self.window.hide_key.pressed.connect(self.close_keyboard)
-        self.window.key_a.pressed.connect(lambda: self.insert_text("a"))
-        self.window.key_b.pressed.connect(lambda: self.insert_text("b"))
-        self.window.key_c.pressed.connect(lambda: self.insert_text("c"))
-        self.window.key_d.pressed.connect(lambda: self.insert_text("d"))
-        self.window.key_e.pressed.connect(lambda: self.insert_text("e"))
-        self.window.key_f.pressed.connect(lambda: self.insert_text("f"))
-        self.window.key_g.pressed.connect(lambda: self.insert_text("g"))
-        self.window.key_h.pressed.connect(lambda: self.insert_text("h"))
-        self.window.key_i.pressed.connect(lambda: self.insert_text("i"))
-        self.window.key_j.pressed.connect(lambda: self.insert_text("j"))
-        self.window.key_k.pressed.connect(lambda: self.insert_text("k"))
-        self.window.key_l.pressed.connect(lambda: self.insert_text("l"))
-        self.window.key_m.pressed.connect(lambda: self.insert_text("m"))
-        self.window.key_n.pressed.connect(lambda: self.insert_text("n"))
-        self.window.key_o.pressed.connect(lambda: self.insert_text("o"))
-        self.window.key_p.pressed.connect(lambda: self.insert_text("p"))
-        self.window.key_q.pressed.connect(lambda: self.insert_text("q"))
-        self.window.key_r.pressed.connect(lambda: self.insert_text("r"))
-        self.window.key_s.pressed.connect(lambda: self.insert_text("s"))
-        self.window.key_t.pressed.connect(lambda: self.insert_text("t"))
-        self.window.key_u.pressed.connect(lambda: self.insert_text("u"))
-        self.window.key_v.pressed.connect(lambda: self.insert_text("v"))
-        self.window.key_w.pressed.connect(lambda: self.insert_text("w"))
-        self.window.key_x.pressed.connect(lambda: self.insert_text("x"))
-        self.window.key_y.pressed.connect(lambda: self.insert_text("y"))
-        self.window.key_z.pressed.connect(lambda: self.insert_text("z"))
-        self.window.key_comma.pressed.connect(lambda: self.insert_text(","))
-        self.window.key_dot.pressed.connect(lambda: self.insert_text("."))
-        self.window.key_space.pressed.connect(lambda: self.insert_text(" "))
-        self.window.key_backspace.pressed.connect(self.backspace)
+        self.window.hide_key.clicked.connect(self.close_keyboard)
+        self.window.key_comma.clicked.connect(lambda: self.insert_text(","))
+        self.window.key_dot.clicked.connect(lambda: self.insert_text("."))
+        self.window.key_space.clicked.connect(lambda: self.insert_text(" "))
+        self.window.key_backspace.clicked.connect(self.backspace)
 
+        for letter in "abcdefghijklmnopqrstuvwxyz":
+            button = getattr(self.window, f"key_{letter}")
+            button.clicked.connect(
+                lambda checked=False, letter=letter: self.insert_text(letter)
+            )
         
         # --- Keys Focus --- #
 

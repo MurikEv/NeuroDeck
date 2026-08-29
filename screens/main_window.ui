@@ -44,7 +44,7 @@
      <string notr="true"/>
     </property>
     <property name="currentIndex">
-     <number>5</number>
+     <number>0</number>
     </property>
     <widget class="QWidget" name="ai_screen">
      <widget class="QTextEdit" name="ai_input">
@@ -3733,8 +3733,6 @@ p, li { white-space: pre-wrap; }
      </widget>
     </widget>
    </widget>
-   <zorder>keyboard_frame</zorder>
-   <zorder>stackedWidget</zorder>
   </widget>
  </widget>
  <resources/>
