@@ -7,6 +7,7 @@ from screens.menu_screen import MenuController
 from screens.calculator_screen import CalculatorController
 from screens.camera_screen import CameraController
 from screens.file_explorer_screen import FileExplorerController
+from screens.settings_screen import SettingsController
 from services import network_service
 import sys
 import queue
@@ -40,6 +41,9 @@ window.camera_controller = camera_controller
 file_explorer_controller = FileExplorerController(window)
 window.file_explorer_controller = file_explorer_controller
 
+settings_controller = SettingsController(window)
+window.settings_controller = settings_controller
+
 
 # --- Network --- #
 network_service.start_network_monitoring()
@@ -68,6 +72,9 @@ def process_ui_queue():
             elif action == "file_explorer":
                 camera_controller.stop()
                 window.switch_to("fileexplorer_screen")
+            elif action == "settings":
+                camera_controller.stop()
+                window.switch_to("settings_screen")
     except queue.Empty:
         pass
 

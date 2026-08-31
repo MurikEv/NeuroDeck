@@ -44,7 +44,7 @@
      <string notr="true"/>
     </property>
     <property name="currentIndex">
-     <number>0</number>
+     <number>7</number>
     </property>
     <widget class="QWidget" name="ai_screen">
      <widget class="QTextEdit" name="ai_input">
@@ -1009,19 +1009,38 @@ QHeaderView::section {
       </property>
      </widget>
     </widget>
-    <widget class="QWidget" name="messenger_screen">
-     <widget class="QTextEdit" name="textEdit_2">
+    <widget class="QWidget" name="messenger_screen"/>
+    <widget class="QWidget" name="settings_screen">
+     <widget class="QPushButton" name="stngs_about_btn">
       <property name="geometry">
        <rect>
-        <x>40</x>
-        <y>200</y>
-        <width>391</width>
-        <height>71</height>
+        <x>10</x>
+        <y>10</y>
+        <width>101</width>
+        <height>51</height>
        </rect>
+      </property>
+      <property name="text">
+       <string>about</string>
+      </property>
+     </widget>
+     <widget class="QFrame" name="stngs_about_frame">
+      <property name="geometry">
+       <rect>
+        <x>120</x>
+        <y>10</y>
+        <width>351</width>
+        <height>301</height>
+       </rect>
+      </property>
+      <property name="frameShape">
+       <enum>QFrame::StyledPanel</enum>
+      </property>
+      <property name="frameShadow">
+       <enum>QFrame::Raised</enum>
       </property>
      </widget>
     </widget>
-    <widget class="QWidget" name="settings_screen"/>
     <widget class="QWidget" name="menu_screen">
      <property name="styleSheet">
       <string notr="true">#menu_screen QFrame {
@@ -3733,6 +3752,8 @@ p, li { white-space: pre-wrap; }
      </widget>
     </widget>
    </widget>
+   <zorder>keyboard_frame</zorder>
+   <zorder>stackedWidget</zorder>
   </widget>
  </widget>
  <resources/>
