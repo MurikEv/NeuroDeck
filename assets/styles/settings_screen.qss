@@ -108,7 +108,11 @@ QLabel[role="subtitle"] {
     font-weight: 700;
 }
 
-QScrollArea#settingsOptionsScroll,
+QScrollArea#settingsOptionsScroll {
+    background: #02090d;
+    border: 1px solid #02090d;
+}
+
 QScrollArea#settingsOptionsScroll > QWidget > QWidget,
 QWidget#settingsOptions {
     background: #02090d;
