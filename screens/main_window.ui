@@ -1194,11 +1194,11 @@ QHeaderView::section {
            <height>230</height>
           </rect>
          </property>
-         <property name="horizontalScrollBarPolicy">
-          <enum>Qt::ScrollBarAlwaysOff</enum>
-         </property>
          <property name="verticalScrollBarPolicy">
           <enum>Qt::ScrollBarAsNeeded</enum>
+         </property>
+         <property name="horizontalScrollBarPolicy">
+          <enum>Qt::ScrollBarAlwaysOff</enum>
          </property>
          <property name="widgetResizable">
           <bool>true</bool>
@@ -1271,11 +1271,14 @@ QHeaderView::section {
               <height>20</height>
              </rect>
             </property>
+            <property name="minimum">
+             <number>20</number>
+            </property>
             <property name="maximum">
              <number>100</number>
             </property>
             <property name="value">
-             <number>70</number>
+             <number>100</number>
             </property>
             <property name="orientation">
              <enum>Qt::Horizontal</enum>
@@ -4226,8 +4229,26 @@ p, li { white-space: pre-wrap; }
      </widget>
     </widget>
    </widget>
-   <zorder>keyboard_frame</zorder>
-   <zorder>stackedWidget</zorder>
+   <widget class="QFrame" name="brightness_overlay">
+    <property name="geometry">
+     <rect>
+      <x>0</x>
+      <y>0</y>
+      <width>480</width>
+      <height>320</height>
+     </rect>
+    </property>
+    <property name="styleSheet">
+     <string notr="true">background-color: rgba(0, 0, 0, 0);
+border: none;</string>
+    </property>
+    <property name="frameShape">
+     <enum>QFrame::StyledPanel</enum>
+    </property>
+    <property name="frameShadow">
+     <enum>QFrame::Raised</enum>
+    </property>
+   </widget>
   </widget>
  </widget>
  <resources/>
