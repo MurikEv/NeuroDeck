@@ -40,6 +40,7 @@ class FileExplorerController:
         self.window.ai_memory_btn.clicked.connect(self.show_ai_memory)
         self.window.cam_pictures_btn.clicked.connect(self.show_pictures)
         self.window.back_to_menu_btn.clicked.connect(self.back_to_menu)
+         
         self.show_ai_memory()
 
     def setup_table(self):

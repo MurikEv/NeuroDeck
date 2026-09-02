@@ -1,4 +1,5 @@
 from PyQt6.QtCore import Qt
+import state
 
 class CalculatorController:
     def __init__(self, window):
@@ -31,6 +32,7 @@ class CalculatorController:
         self.window.btnBackspace.clicked.connect(self.backspace)
         self.window.btnClear.clicked.connect(self.clear)
         self.window.btnEquals.clicked.connect(self.calculate)
+        self.window.calculatorBackButton.clicked.connect(self.back_to_menu)
 
     def append_input(self, value: str):
         self.expression += value
@@ -58,6 +60,6 @@ class CalculatorController:
             self.window.display.setText(self.expression)
         else:
             self.window.display.setText("0")
-        
-    def handle_key(self, event):
-        pass
+
+    def back_to_menu(self):
+        state.ui_queue.put(("menu", None))

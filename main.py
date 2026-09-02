@@ -49,8 +49,6 @@ window.settings_controller = settings_controller
 network_service.start_network_monitoring()
 
 
-keyboard.add_hotkey("q", lambda: state.ui_queue.put(("menu", None)))
-
 # --- Screen switcher (queue) --- #
 def process_ui_queue():
     try:

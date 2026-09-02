@@ -23,6 +23,7 @@ class AIController(QObject):
         self.status_timer.timeout.connect(self.update_status_label)
         self.status_timer.start(1000)
 
+        self.window.aiBackButton.clicked.connect(self.back_to_menu)
         self.window.ai_send_btn.clicked.connect(self.send_message)
         self.window.ai_clear_btn.clicked.connect(self.clear_chat)
 
@@ -65,6 +66,9 @@ class AIController(QObject):
         self.window.ai_send_btn.setEnabled(False)
 
         threading.Thread(target=self.run_ai_request, args=(prompt,), daemon=True).start()
+
+    def back_to_menu(self):
+        state.ui_queue.put(("menu", None))
 
     def clear_chat(self):
         self.window.ai_output.clear()
