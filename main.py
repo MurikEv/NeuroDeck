@@ -17,9 +17,33 @@ import state
     # --- Creating main window --- #
 
 app = QApplication(sys.argv)
+
+# --- Optional SPI status display --- #
+display = None
+try:
+    from services.display_service import ST7796Display
+
+    display = ST7796Display()
+    display.fill_color(0x0000)
+    display.draw_text("NEURODECK", x=10, y=20, background=0x0000)
+    display.draw_text("BOOTING...", x=10, y=60, background=0x0000)
+except Exception as exc:
+    print(f"ST7796 display unavailable: {exc}", file=sys.stderr)
+    if display is not None:
+        display.close()
+        display = None
+
 window = MainWindow()
 state.main_window = window
 window.show()
+
+if display is not None:
+    try:
+        display.draw_text("UI READY", x=10, y=100, background=0x0000)
+    except Exception as exc:
+        print(f"ST7796 display unavailable: {exc}", file=sys.stderr)
+        display.close()
+        display = None
 
     # --- Controllers --- #
 
@@ -80,4 +104,10 @@ ui_queue_timer = QTimer()
 ui_queue_timer.timeout.connect(process_ui_queue)
 ui_queue_timer.start(10)
 
-sys.exit(app.exec())
+try:
+    exit_code = app.exec()
+finally:
+    if display is not None:
+        display.close()
+
+sys.exit(exit_code)
