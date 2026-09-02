@@ -2772,19 +2772,6 @@ border-radius:5px;</string>
       <zorder>settings_btn_highlight_light</zorder>
       <zorder>settings_btn</zorder>
      </widget>
-     <widget class="QPushButton" name="pushButton">
-      <property name="geometry">
-       <rect>
-        <x>150</x>
-        <y>100</y>
-        <width>151</width>
-        <height>121</height>
-       </rect>
-      </property>
-      <property name="text">
-       <string>TESTEsывп</string>
-      </property>
-     </widget>
     </widget>
    </widget>
    <widget class="QFrame" name="keyboard_frame">
