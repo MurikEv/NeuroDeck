@@ -10,6 +10,7 @@ class MainWindow(QMainWindow):
         uic.loadUi(r"screens/main_window.ui", self)
 
         self.keyboard_frame.hide()
+        self.showFullScreen()
         self.stackedWidget.setCurrentWidget(self.menu_screen)
 
         self.menu_controller = None
