@@ -16,6 +16,11 @@ SPI_PATH = f"/dev/spidev{SPI_BUS}.{SPI_DEVICE}"
 SPI_SPEED_HZ = 24_000_000
 
 WRITE_CHUNK_PIXELS = 1024
+WRITE_CHUNK_BYTES = WRITE_CHUNK_PIXELS * 2
+COLOR_INVERSION_TABLE = bytes.maketrans(
+    bytes(range(256)),
+    bytes(range(255, -1, -1)),
+)
 
 _BUILTIN_FONT = {
     " ": (0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00),
@@ -225,6 +230,17 @@ class ST7796Display:
         if pixel_count:
             self._spi.writebytes(pixel_bytes * pixel_count)
 
+    def _write_buffer(self, data):
+        self._dc.set_value(1)
+        write_buffer = getattr(self._spi, "writebytes2", None)
+        if write_buffer is not None:
+            write_buffer(data)
+            return
+
+        for offset in range(0, len(data), WRITE_CHUNK_BYTES):
+            chunk = data[offset:offset + WRITE_CHUNK_BYTES]
+            self._spi.writebytes(list(chunk))
+
     def fill_color(self, color):
         """Fill the full display with one logical RGB565 color."""
         self._require_open()
@@ -236,6 +252,32 @@ class ST7796Display:
 
         self._set_window(0, 0, WIDTH - 1, HEIGHT - 1)
         self._write_repeated_pixel(pixel_bytes, WIDTH * HEIGHT)
+
+    def blit_rgb565(self, data, width, height, x=0, y=0):
+        """Write logical, big-endian RGB565 pixels to a display rectangle."""
+        self._require_open()
+        width = int(width)
+        height = int(height)
+        x = int(x)
+        y = int(y)
+
+        if width <= 0 or height <= 0:
+            raise ValueError("width and height must be positive")
+        if x < 0 or y < 0 or x + width > WIDTH or y + height > HEIGHT:
+            raise ValueError("RGB565 rectangle is outside the display bounds")
+
+        data = bytes(data)
+        expected_size = width * height * 2
+        if len(data) != expected_size:
+            raise ValueError(
+                f"RGB565 data must contain {expected_size} bytes, got {len(data)}"
+            )
+
+        # XORing every byte is equivalent to color = color ^ 0xFFFF for each
+        # big-endian RGB565 word, while avoiding a slow per-pixel Python loop.
+        panel_data = data.translate(COLOR_INVERSION_TABLE)
+        self._set_window(x, y, x + width - 1, y + height - 1)
+        self._write_buffer(panel_data)
 
     @staticmethod
     def _load_font(image_font):

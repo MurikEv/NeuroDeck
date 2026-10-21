@@ -7,7 +7,9 @@
 - SPI overlay: `spidev` on `spi3m1` over CS0
 - SPI device: `/dev/spidev3.0` (bus 3, chip select 0)
 - SPI settings used by the working test: mode 0, 24 MHz, RGB565
-- Display service v1 is status-only. The main PyQt UI remains on HDMI.
+- Display service v1 boot/status text is hardware-verified.
+- The current migration stage mirrors the existing 480x320 PyQt UI to the
+  320x480 SPI panel while retaining HDMI as a recovery path.
 
 ## Display wiring
 
@@ -52,9 +54,40 @@ color = color ^ 0xFFFF
 
 Keep this workaround in both fill and drawing paths.
 
+## Qt UI mirror
+
+- The existing PyQt UI is already designed for 480x320 landscape.
+- The mirror renders that canvas, rotates it in software, converts it to
+  big-endian RGB565, and sends it through the display service.
+- Default software rotation is 90 degrees. If the image is upside down, test
+  270 degrees without changing code:
+
+  ```bash
+  sudo env NEURODECK_SPI_ROTATION=270 ./venv/bin/python main.py
+  ```
+
+- To keep only the verified boot/status screen while diagnosing mirror issues:
+
+  ```bash
+  sudo env NEURODECK_SPI_MIRROR=0 ./venv/bin/python main.py
+  ```
+
+- Capture is limited to four checks per second. Unchanged frames are skipped,
+  and the SPI worker keeps only the newest pending frame so the Qt UI thread
+  does not wait for a full-screen SPI transfer.
+- HDMI remains enabled during this validation stage. Headless Qt/offscreen
+  mode comes only after frame orientation and refresh behavior work reliably.
+- Touch is a separate next phase. The CTP controller, voltage, I2C bus/address,
+  reset/interrupt GPIO mapping, and coordinate orientation must be identified
+  before connecting or implementing it.
+
 ## Current status
 
 - Display: the color test in `display_test_working.py` is working. Red, green,
   blue, and white fill correctly with the RGB565 inversion fix.
+- Boot display: `NEURODECK`, `BOOTING...`, and `UI READY` are confirmed working
+  on the target display.
+- Full PyQt mirror: implemented as a transitional mode; hardware orientation
+  and refresh behavior still need validation on the Radxa.
 - Camera: `/dev/video0` is working. `fswebcam` is not recommended; use
   GStreamer or OpenCV for camera capture.
