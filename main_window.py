@@ -1,6 +1,5 @@
 from PyQt6 import uic
 from PyQt6.QtWidgets import QMainWindow
-from PyQt6.QtGui import QKeyEvent
 import socket
 
 
@@ -25,15 +24,6 @@ class MainWindow(QMainWindow):
         screen = getattr(self, screen_name, None)
         if screen:
             self.stackedWidget.setCurrentWidget(screen)
-
-    def keyPressEvent(self, event: QKeyEvent):
-        current_screen = self.stackedWidget.currentWidget()
-        if current_screen == self.menu_screen and self.menu_controller is not None:
-            self.menu_controller.handle_key(event)
-        elif current_screen == self.calculator_screen and self.calculator_controller is not None:
-            self.calculator_controller.handle_key(event)
-        else:
-            super().keyPressEvent(event)
 
     def closeEvent(self, event):
         if getattr(self, "camera_controller", None) is not None:

@@ -9,11 +9,15 @@ from screens.camera_screen import CameraController
 from screens.file_explorer_screen import FileExplorerController
 from screens.settings_screen import SettingsController
 from services import network_service
+from services.developer_keyboard import DeveloperKeyboardController
 import os
 import sys
 import queue
-import keyboard
 import state
+
+
+# Developer-only opt-in. Keep False for the touch-operated device.
+ENABLE_DEVELOPER_KEYBOARD = True
 
 
 def main():
@@ -21,6 +25,7 @@ def main():
     display = None
     display_mirror = None
     display_safe_to_close = True
+    developer_keyboard = None
 
     try:
         # --- Optional SPI status display --- #
@@ -53,6 +58,9 @@ def main():
         # --- Controllers --- #
         menu_controller = MenuController(window)
         window.menu_controller = menu_controller
+        developer_keyboard = DeveloperKeyboardController(
+            app, window, enabled=ENABLE_DEVELOPER_KEYBOARD
+        )
 
         keyboard_controller = KeyboardController(window)
         window.keyboard_controller = keyboard_controller
@@ -132,6 +140,8 @@ def main():
 
         return app.exec()
     finally:
+        if developer_keyboard is not None:
+            developer_keyboard.close()
         if display_mirror is not None:
             display_safe_to_close = display_mirror.stop()
         if display is not None and display_safe_to_close:

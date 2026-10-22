@@ -1,12 +1,9 @@
-from PyQt6.QtGui import QKeyEvent
 from PyQt6.QtCore import Qt
 import state
 
 class MenuController:
     def __init__(self, window):
         self.window = window
-        self.selected_row = 0
-        self.selected_col = 0
 
         self.cards = [
             [
@@ -75,6 +72,8 @@ class MenuController:
         for row in self.cards:
             for card in row:
                 card["button"].setFocusPolicy(Qt.FocusPolicy.NoFocus)
+                card["button"].pressed.connect(self.highlight)
+                card["button"].released.connect(self.highlight)
 
         window.ai_btn.clicked.connect(lambda: state.ui_queue.put(("ai", None)))
         window.calculator_btn.clicked.connect(lambda: state.ui_queue.put(("calculator", None)))
@@ -111,32 +110,26 @@ border-radius:10px;"""
     active_bg_style = base_bg_style.replace("background-color: #02141d",
                                             "background-color: qlineargradient(x1:0, y1:0, x2:1, y2:0,stop:0 #02141d,stop:0.87 #02141d,stop:1 #00f4ff)")
 
-    def highlight(self):
-        for r, row in enumerate(self.cards):
-            for c, card in enumerate(row):
-                if r == self.selected_row and c == self.selected_col:
-                    card["button"].setStyleSheet(self.active_button_style)
-                    card["highlight_frame"].setStyleSheet(self.active_highlight_frame_style)
-                    card["light"].setStyleSheet(self.active_light_style)
-                    card["bg"].setStyleSheet(self.active_bg_style)
-                else:
-                    card["button"].setStyleSheet(self.base_button_style)
-                    card["highlight_frame"].setStyleSheet(self.base_highlight_frame_style)
-                    card["light"].setStyleSheet(self.base_light_style)
-                    card["bg"].setStyleSheet(self.base_bg_style)
-
-    def handle_key(self, event):
-        key = event.key()
-        if key == Qt.Key.Key_Right:
-            self.selected_col = (self.selected_col + 1) % len(self.cards[self.selected_row])
-        elif key == Qt.Key.Key_Left:
-            self.selected_col = (self.selected_col - 1) % len(self.cards[self.selected_row])
-        elif key == Qt.Key.Key_Down:
-            self.selected_row = (self.selected_row + 1) % len(self.cards)
-            self.selected_col = min(self.selected_col, len(self.cards[self.selected_row]) - 1)
-        elif key == Qt.Key.Key_Up:
-            self.selected_row = (self.selected_row - 1) % len(self.cards)
-            self.selected_col = min(self.selected_col, len(self.cards[self.selected_row]) - 1)
-        elif key == Qt.Key.Key_Return:
-            self.cards[self.selected_row][self.selected_col]["button"].click()
-        self.highlight()
+    def highlight(self, selected_button=None):
+        pressed_button = next(
+            (card["button"] for row in self.cards for card in row
+             if card["button"].isDown()),
+            None,
+        )
+        active_button = pressed_button or selected_button
+        for row in self.cards:
+            for card in row:
+                active = card["button"] is active_button
+                card["button"].setStyleSheet(
+                    self.active_button_style if active else self.base_button_style
+                )
+                card["highlight_frame"].setStyleSheet(
+                    self.active_highlight_frame_style
+                    if active else self.base_highlight_frame_style
+                )
+                card["light"].setStyleSheet(
+                    self.active_light_style if active else self.base_light_style
+                )
+                card["bg"].setStyleSheet(
+                    self.active_bg_style if active else self.base_bg_style
+                )
