@@ -4,6 +4,7 @@ from main_window import MainWindow
 from screens.keyboard_controller import KeyboardController
 from screens.ai_screen import AIController
 from screens.menu_screen import MenuController
+from screens.notepad_screen import NotepadController
 from screens.calculator_screen import CalculatorController
 from screens.camera_screen import CameraController
 from screens.file_explorer_screen import FileExplorerController
@@ -81,6 +82,9 @@ def main():
         settings_controller = SettingsController(window)
         window.settings_controller = settings_controller
 
+        notepad_controller = NotepadController(window)
+        window.notepad_controller = notepad_controller
+
         # --- Network --- #
         network_service.start_network_monitoring()
 
@@ -89,6 +93,8 @@ def main():
             try:
                 while True:
                     action, _payload = state.ui_queue.get_nowait()
+                    if action != "notepad" and not notepad_controller.save_pending():
+                        continue
                     if action == "menu":
                         camera_controller.stop()
                         window.switch_to("menu_screen")
@@ -108,6 +114,9 @@ def main():
                     elif action == "settings":
                         camera_controller.stop()
                         window.switch_to("settings_screen")
+                    elif action == "notepad":
+                        camera_controller.stop()
+                        window.switch_to("notepad_screen")
             except queue.Empty:
                 pass
 

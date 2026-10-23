@@ -12,7 +12,8 @@ Implemented:
 - Calculator UI with button input, basic arithmetic, decimal points, and parentheses.
 - Text-only AI chat through the Groq API when the network monitor reports an online connection.
 - Static offline response when no network connection is reported.
-- On-screen keyboard connected to the AI text input.
+- Shared on-screen keyboard for AI input and Notepad search, titles, and note text.
+- Local Notepad with editing, autosave, search, favorites, archive, and sorting.
 - Camera preview, JPEG capture, and storage in `data/camera_pictures/`.
 - File explorer for AI-memory and camera-picture folders.
 - Image viewer for supported image files.
@@ -20,7 +21,7 @@ Implemented:
 
 Partial or placeholder functionality:
 
-- Browser, Notepad, Messenger, and Settings appear in the menu but do not have implemented routes.
+- Browser, Messenger, and Settings appear in the menu but do not have implemented routes.
 - Offline AI is a placeholder response, not a local model.
 - AI answers are not saved to `data/ai_memory/`.
 - The file explorer can display directories and non-image files but only opens supported images.
@@ -105,6 +106,30 @@ The current AI mode is text-only. Image analysis and a real local model are not 
 
 `FileExplorerController` lists entries from `data/ai_memory/` and `data/camera_pictures/`. Supported image formats can be opened in the programmatic `ImageViewerScreen`.
 
+### Notepad
+
+Open Notepad from the menu. Tap `CREATE` or `NEW NOTE`, enter a title and text,
+then use `SAVE` or return to the list. Changes also autosave after a short pause;
+an empty new draft is not stored. Tap a note to edit it. The editor offers
+favorite/unfavorite, archive/restore, and deletion with in-window confirmation.
+
+`SEARCH` opens the existing virtual keyboard and filters titles and note text
+in the selected category. `DONE` (or the keyboard's hide key) closes the keyboard;
+`X` clears and closes search. The same keyboard opens when a title or note body
+is tapped. `SHIFT`, `123/ABC`, and `ENTER/DONE` support capitals, numbers/symbols,
+and multiline text without a physical keyboard.
+
+`RECENT` shows the latest 20 non-archived notes. `SORT` cycles through most
+recently updated, title A-Z, and newest created. Favorites exclude archived notes;
+archived notes can be restored without losing their favorite flag.
+
+Notes are stored locally in `data/notepad/notes.json` (relative to the project,
+not the working directory). This private runtime folder is ignored by Git.
+Writes use atomic replacement; storage errors keep unsaved edits in the editor
+and prevent navigation/normal window close until saving succeeds or the user
+explicitly discards changes (with confirmation). Corrupt files
+are reported without being overwritten. No new dependencies are required.
+
 ## Installation
 
 The current development environment uses Python 3.14. A camera is optional unless Camera mode is being tested.
@@ -140,6 +165,7 @@ Running from another working directory is not currently supported because UI and
 
 - Camera captures are written to `data/camera_pictures/`.
 - AI-memory storage is planned for `data/ai_memory/`, but no writer exists yet.
+- Notepad notes are saved in `data/notepad/notes.json`; copy this file to back up your notes.
 - Runtime data directories may be absent in a clean clone and are created only by the code paths that explicitly create them.
 
 ## Known Limitations

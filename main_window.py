@@ -26,6 +26,10 @@ class MainWindow(QMainWindow):
             self.stackedWidget.setCurrentWidget(screen)
 
     def closeEvent(self, event):
+        notepad = getattr(self, "notepad_controller", None)
+        if notepad is not None and not notepad.save_pending():
+            event.ignore()
+            return
         if getattr(self, "camera_controller", None) is not None:
             self.camera_controller.stop()
         super().closeEvent(event)
