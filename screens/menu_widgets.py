@@ -18,6 +18,8 @@ from screens.menu_icons import draw_brand_mark, draw_icon
 
 
 ASSETS = Path(__file__).resolve().parents[1] / "assets"
+WORDMARK_TARGET = QRectF(35, 8, 63, 13)
+WORDMARK_SOURCE = QRectF(111, 27, 232, 41)
 RED = QColor("#ff304b")
 CYAN = QColor("#21edfa")
 _FONT_FAMILY = None
@@ -205,6 +207,7 @@ class MenuCanvas(QWidget):
         self.setObjectName("neurodeckMenuCanvas")
         self.setFixedSize(480, 320)
         self.reference_artwork = QPixmap(str(ASSETS / "background" / "menu_reference.png"))
+        self.wordmark_artwork = QPixmap(str(ASSETS / "background" / "menu_neurodeck_source.png"))
         self.background = QPixmap(str(ASSETS / "background" / "bg_menu.png"))
         self.status = {}
         self.setAccessibleName("NeuroDeck main menu")
@@ -221,10 +224,21 @@ class MenuCanvas(QWidget):
     def paintEvent(self, event):
         painter = QPainter(self)
         try:
+            # Hide the baked-in grey/blue outer chassis outline without
+            # changing the artwork, card hitboxes or inner red neon framing.
+            painter.fillRect(self.rect(), Qt.GlobalColor.black)
+            content_clip = QPainterPath()
+            content_clip.addRoundedRect(QRectF(5, 4, 470, 312), 12, 12)
+            painter.setClipPath(content_clip)
             if not self.reference_artwork.isNull():
                 # Native 480px width: no resampling or distortion. Only the
                 # source's last three near-black padding rows lie below 320px.
                 painter.drawPixmap(0, 0, self.reference_artwork)
+                if not self.wordmark_artwork.isNull():
+                    # Use only the edited word, never the generated rest of the
+                    # menu: the emblem, signal bars and all other pixels stay original.
+                    painter.setRenderHint(QPainter.RenderHint.SmoothPixmapTransform)
+                    painter.drawPixmap(WORDMARK_TARGET, self.wordmark_artwork, WORDMARK_SOURCE)
                 return
             painter.setRenderHints(QPainter.RenderHint.Antialiasing | QPainter.RenderHint.SmoothPixmapTransform)
             painter.fillRect(self.rect(), QColor("#010509"))

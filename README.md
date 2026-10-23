@@ -91,10 +91,13 @@ The visual-only version displays `assets/background/menu_reference.png` exactly,
 without redrawing the reference's lettering, icons or neon. This tracked asset
 is a byte-for-byte copy of the local reference. It is displayed at native 480px
 width; only three near-black bottom padding rows fall outside the 320px canvas.
-Transparent buttons add feedback while held; the untouched image shows through
-in their normal state. Other screens are unchanged.
+Only the upper-left wordmark is replaced with `neurodeck`, matched to the
+original geometric lettering. Its edited source is
+`assets/background/menu_neurodeck_source.png`; Qt draws only the small wordmark
+crop, preserving all other reference pixels. Transparent buttons add feedback
+while held. Other screens are unchanged.
 
-The header is intentionally static to match the reference, including Arasaka,
+The header is intentionally static to match the reference, apart from NeuroDeck:
 the original small labels, network bars, battery and `19:77`. These are artwork,
 not live readings in this visual-only version. The existing clock/network
 snapshot logic is retained, but does not overwrite the reference. The previous
