@@ -11,13 +11,14 @@ from screens.file_explorer_screen import FileExplorerController
 from screens.settings_screen import SettingsController
 from services import network_service
 from services.developer_keyboard import DeveloperKeyboardController
+from services.status_service import ApplicationStatus
+from screens.status_bar import GlobalStatusController
 import os
 import sys
 import queue
 import state
 
 
-# Developer-only opt-in. Keep False for the touch-operated device.
 ENABLE_DEVELOPER_KEYBOARD = False
 
 
@@ -28,6 +29,7 @@ def main():
     display_safe_to_close = True
     developer_keyboard = None
     touch_service = None
+    status_service = None
 
     try:
         # --- Optional SPI status display --- #
@@ -58,7 +60,9 @@ def main():
                 display = None
 
         # --- Controllers --- #
-        menu_controller = MenuController(window)
+        status_service = ApplicationStatus(window)
+        window.status_service = status_service
+        menu_controller = MenuController(window, status_service=status_service)
         window.menu_controller = menu_controller
         developer_keyboard = DeveloperKeyboardController(
             app, window, enabled=ENABLE_DEVELOPER_KEYBOARD
@@ -84,6 +88,8 @@ def main():
 
         notepad_controller = NotepadController(window)
         window.notepad_controller = notepad_controller
+
+        window.global_status_controller = GlobalStatusController(window, status_service)
 
         # --- Network --- #
         network_service.start_network_monitoring()
@@ -166,6 +172,8 @@ def main():
 
         return app.exec()
     finally:
+        if status_service is not None:
+            status_service.close()
         if touch_service is not None:
             touch_service.close()
         if developer_keyboard is not None:

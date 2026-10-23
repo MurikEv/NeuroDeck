@@ -87,6 +87,7 @@ The global `Q` binding is temporary. It also reacts while typing a physical `q` 
 ### Menu
 
 `MenuController` keeps the existing menu page and its eight real Qt buttons.
+Menu painting, widgets and interaction are kept together in `screens/menu_screen.py`.
 The visual-only version displays `assets/background/menu_reference.png` exactly,
 without redrawing the reference's lettering, icons or neon. This tracked asset
 is a byte-for-byte copy of the local reference. It is displayed at native 480px
@@ -95,6 +96,7 @@ Only the upper-left wordmark is replaced with `neurodeck`, matched to the
 original geometric lettering. Its edited source is
 `assets/background/menu_neurodeck_source.png`; Qt draws only the small wordmark
 crop, preserving all other reference pixels. Transparent buttons add feedback
+<<<<<<< HEAD
 while held. Other screens are unchanged.
 
 The header is intentionally static to match the reference, apart from NeuroDeck:
@@ -102,6 +104,39 @@ the original small labels, network bars, battery and `19:77`. These are artwork,
 not live readings in this visual-only version. The existing clock/network
 snapshot logic is retained, but does not overwrite the reference. The previous
 vector menu remains a fallback if the reference asset cannot be loaded.
+=======
+while held. The reference header's fixed clock/network artwork is covered by
+the shared live header described below.
+
+`ApplicationStatus` in `services/status_service.py` is the single shared source
+for the device's local system time and the existing network monitor's cached
+Internet status. One one-second Qt timer updates all subscribers without
+performing network I/O in the UI thread. The existing network monitor keeps
+its own background connectivity check; no new monitor is started per screen.
+
+`GlobalStatusBar` / `GlobalStatusController` in `screens/status_bar.py` install
+one 26px header outside the stacked pages. Real `HH:mm` replaces `19:77`.
+Three cyan bars mean Internet is available; dim red means offline, and muted
+bars mean checking. This is not a Wi-Fi signal-strength measurement. Battery
+and the remaining micro-markings stay decorative.
+
+`GlobalScreenShell` shares the original menu's full decorative sidebars and
+bottom strip, including their lettering, red neon corners and barcode. It
+does not draw a new thin outline. The shared decoration excludes the central
+photo/cards rectangle and the live header, so application content stays visible.
+It is pointer-transparent and remains visible over the virtual keyboard;
+the brightness overlay dims the complete shell together with the UI.
+
+Menu keeps its original 480x320 geometry. Other screens and the virtual keyboard
+fit into the shared shell's central rectangle: x=26, y=34, 429x258. Native touch
+hit targets are preserved. Layout-managed controls are left to Qt; fixed key
+constraints, fonts and named widget geometry are adapted idempotently. Scroll
+area application contents (such as settings rows) fit the same viewport without
+modifying Qt's internal scrollbars or headers.
+New stacked pages automatically get the same header. Responsive pages that
+already handle their own `resizeEvent` can set `statusBarResponsive=True` to
+avoid applying fixed-geometry compaction (as the image viewer does).
+>>>>>>> 53a3672 (feat: some ui updates)
 
 Cards highlight only while pressed and cancel activation when the finger moves
 outside before release. Developer keyboard navigation remains opt-in. AI,
@@ -128,7 +163,20 @@ The current AI mode is text-only. Image analysis and a real local model are not 
 
 ### Files
 
-`FileExplorerController` lists entries from `data/ai_memory/` and `data/camera_pictures/`. Supported image formats can be opened in the programmatic `ImageViewerScreen`.
+The File Explorer visual prototype is contained in `screens/file_explorer_screen.py`.
+It keeps the shared outer shell, with Files above Photos, Favorites and Trash on
+the left, an empty gallery in the middle, and an unselected preview/details area
+on the right. Sort, Open, Delete, Favorite and Share are disabled for this stage.
+Category buttons only change visual selection; Menu returns through the existing
+route. No directory is loaded automatically, no sample files or metadata are
+invented, and storage information is explicitly marked as not loaded.
+
+The screen has no photograph background. Its existing dark teal panel colors
+fade smoothly into black, matching the gradient backgrounds of the controls.
+Buttons and frames use bright cyan neon edges with layered glow and corner
+accents; active navigation uses red neon. Disabled actions remain unavailable.
+The previous read-only listing/image-viewer helpers remain available for the
+later functional stage.
 
 ### Notepad
 

@@ -1,4 +1,4 @@
-"""Small, non-blocking status snapshot for the menu header."""
+"""Non-blocking clock/network formatting shared by the application header."""
 
 from datetime import datetime
 
