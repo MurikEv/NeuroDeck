@@ -86,7 +86,28 @@ The global `Q` binding is temporary. It also reacts while typing a physical `q` 
 
 ### Menu
 
-`MenuController` manages the selection coordinates, visual highlight, and mode actions. AI, Calculator, Camera, and Files currently have working routes. The other menu entries are placeholders.
+`MenuController` keeps the existing menu page and its eight real Qt buttons.
+The visual-only version displays `assets/background/menu_reference.png` exactly,
+without redrawing the reference's lettering, icons or neon. This tracked asset
+is a byte-for-byte copy of the local reference. It is displayed at native 480px
+width; only three near-black bottom padding rows fall outside the 320px canvas.
+Transparent buttons add feedback while held; the untouched image shows through
+in their normal state. Other screens are unchanged.
+
+The header is intentionally static to match the reference, including Arasaka,
+the original small labels, network bars, battery and `19:77`. These are artwork,
+not live readings in this visual-only version. The existing clock/network
+snapshot logic is retained, but does not overwrite the reference. The previous
+vector menu remains a fallback if the reference asset cannot be loaded.
+
+Cards highlight only while pressed and cancel activation when the finger moves
+outside before release. Developer keyboard navigation remains opt-in. AI,
+Calculator, Camera, Notepad, Files, and Settings keep their existing routes;
+Browser and Messenger remain placeholders.
+
+The bundled Rajdhani typeface comes from
+[Google Fonts](https://github.com/google/fonts/tree/main/ofl/rajdhani);
+its SIL Open Font License is included in `assets/fonts/OFL-Rajdhani.txt`.
 
 ### Calculator
 
