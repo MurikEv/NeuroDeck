@@ -2,7 +2,7 @@ from PyQt6.QtCore import QObject, QEvent, Qt
 
 class KeyboardController(QObject):
     def __init__(self, window):
-        super().__init__()
+        super().__init__(window)
         self.window = window
 
         self.active_text_widget = None
@@ -68,8 +68,8 @@ class KeyboardController(QObject):
         self.window.keyboard_text_input.setTextCursor(cursor)
 
     def eventFilter(self, obj, event):
-        if obj == self.ai_input_viewport:
-            if event.type() == QEvent.Type.MouseButtonPress:
+        if event.type() == QEvent.Type.MouseButtonPress:
+            if obj == self.ai_input_viewport:
                 self.open_keyboard(self.ai_input)
 
         return False
@@ -87,6 +87,8 @@ class KeyboardController(QObject):
         self.window.keyboard_text_input.setTextCursor(cursor)
 
         self.window.keyboard_frame.show()
+        self.window.keyboard_frame.raise_()
+        self.window.brightness_overlay.raise_()
         self.window.keyboard_text_input.setFocus()
 
     def sync_to_active_widget(self):

@@ -26,6 +26,7 @@ def main():
     display_mirror = None
     display_safe_to_close = True
     developer_keyboard = None
+    touch_service = None
 
     try:
         # --- Optional SPI status display --- #
@@ -138,8 +139,26 @@ def main():
                     if display_mirror.stop():
                         display_mirror = None
 
+        # --- Optional touch input for the SPI mirror --- #
+        if (
+            display_mirror is not None
+            and os.getenv("NEURODECK_TOUCH", "1").lower() not in ("0", "false", "no")
+        ):
+            try:
+                from services.touch_service import QtTouchService
+
+                touch_service = QtTouchService(window, rotation=display_rotation)
+                touch_service.start()
+            except Exception as exc:
+                print(f"FT6336 touch unavailable: {exc}", file=sys.stderr)
+                if touch_service is not None:
+                    touch_service.close()
+                    touch_service = None
+
         return app.exec()
     finally:
+        if touch_service is not None:
+            touch_service.close()
         if developer_keyboard is not None:
             developer_keyboard.close()
         if display_mirror is not None:
