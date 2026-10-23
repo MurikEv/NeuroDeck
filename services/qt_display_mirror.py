@@ -1,9 +1,10 @@
-import queue
+from collections import deque
 import sys
 import threading
 
 from PyQt6.QtCore import QObject, QPoint, QTimer
 from PyQt6.QtGui import QImage, QPainter, QRegion, QTransform
+from PyQt6.QtWidgets import QAbstractButton
 
 
 UI_WIDTH = 480
@@ -11,10 +12,11 @@ UI_HEIGHT = 320
 DISPLAY_WIDTH = 320
 DISPLAY_HEIGHT = 480
 DEFAULT_CAPTURE_INTERVAL_MS = 250
+MAX_PENDING_PRESS_FRAMES = 2
 
 
 class QtDisplayMirror(QObject):
-    """Render the existing Qt window and send only the latest frame to SPI."""
+    """Mirror Qt, preserving short button presses ahead of the latest UI frame."""
 
     def __init__(
         self,
@@ -32,7 +34,9 @@ class QtDisplayMirror(QObject):
         self._window = window
         self._display = display
         self._rotation = rotation
-        self._frames = queue.Queue(maxsize=1)
+        self._frame_ready = threading.Condition()
+        self._press_frames = deque()
+        self._pending_frame = None
         self._stop_event = threading.Event()
         self._failure_lock = threading.Lock()
         self._failure_reported = False
@@ -42,6 +46,14 @@ class QtDisplayMirror(QObject):
         self._timer = QTimer(self)
         self._timer.setInterval(capture_interval_ms)
         self._timer.timeout.connect(self._capture_frame)
+
+        # Connect after the screen controllers so their highlight/text updates
+        # are already applied when render() captures the signal's exact state.
+        for button in window.findChildren(QAbstractButton):
+            button.pressed.connect(self._capture_press)
+            button.released.connect(self._capture_changed)
+            button.clicked.connect(self._capture_changed)
+        window.stackedWidget.currentChanged.connect(self._capture_changed)
 
     def start(self):
         if self._worker is not None:
@@ -61,18 +73,11 @@ class QtDisplayMirror(QObject):
 
     def stop(self):
         self._timer.stop()
-        self._stop_event.set()
-
-        try:
-            while True:
-                self._frames.get_nowait()
-        except queue.Empty:
-            pass
-
-        try:
-            self._frames.put_nowait(None)
-        except queue.Full:
-            pass
+        with self._frame_ready:
+            self._stop_event.set()
+            self._press_frames.clear()
+            self._pending_frame = None
+            self._frame_ready.notify_all()
 
         worker = self._worker
         if worker is not None:
@@ -86,7 +91,13 @@ class QtDisplayMirror(QObject):
         self._worker = None
         return True
 
-    def _capture_frame(self):
+    def _capture_press(self):
+        self._capture_frame(preserve_press=True)
+
+    def _capture_changed(self, *_args):
+        self._capture_frame()
+
+    def _capture_frame(self, preserve_press=False):
         if self._stop_event.is_set():
             self._timer.stop()
             return
@@ -98,25 +109,26 @@ class QtDisplayMirror(QObject):
             self._report_failure("Qt capture failed", exc)
             return
 
-        if frame == self._last_frame:
+        if frame == self._last_frame and not preserve_press:
             return
         self._last_frame = frame
 
-        try:
-            self._frames.put_nowait(frame)
-            return
-        except queue.Full:
-            pass
-
-        try:
-            self._frames.get_nowait()
-        except queue.Empty:
-            pass
-
-        try:
-            self._frames.put_nowait(frame)
-        except queue.Full:
-            pass
+        with self._frame_ready:
+            if self._stop_event.is_set():
+                return
+            if preserve_press:
+                # A timer/release/next-screen frame must not erase a short tap
+                # while a previous SPI transfer is still in progress.
+                self._pending_frame = None
+                if not self._press_frames or self._press_frames[-1] != frame:
+                    if len(self._press_frames) == MAX_PENDING_PRESS_FRAMES:
+                        # Bound latency under a burst: retain the oldest pending
+                        # feedback and replace the newest with the latest press.
+                        self._press_frames.pop()
+                    self._press_frames.append(frame)
+            else:
+                self._pending_frame = frame
+            self._frame_ready.notify()
 
     def _render_rgb565_frame(self):
         if (
@@ -183,14 +195,19 @@ class QtDisplayMirror(QObject):
         return bytes(converted)
 
     def _worker_loop(self):
-        while not self._stop_event.is_set():
-            try:
-                frame = self._frames.get(timeout=0.1)
-            except queue.Empty:
-                continue
-
-            if frame is None or self._stop_event.is_set():
-                return
+        while True:
+            with self._frame_ready:
+                self._frame_ready.wait_for(
+                    lambda: self._stop_event.is_set()
+                    or bool(self._press_frames)
+                    or self._pending_frame is not None
+                )
+                if self._stop_event.is_set():
+                    return
+                if self._press_frames:
+                    frame = self._press_frames.popleft()
+                else:
+                    frame, self._pending_frame = self._pending_frame, None
 
             try:
                 self._display.blit_rgb565(
@@ -208,5 +225,7 @@ class QtDisplayMirror(QObject):
                 return
             self._failure_reported = True
 
-        self._stop_event.set()
+        with self._frame_ready:
+            self._stop_event.set()
+            self._frame_ready.notify_all()
         print(f"ST7796 mirror unavailable: {reason}: {error}", file=sys.stderr)

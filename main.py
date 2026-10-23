@@ -17,7 +17,7 @@ import state
 
 
 # Developer-only opt-in. Keep False for the touch-operated device.
-ENABLE_DEVELOPER_KEYBOARD = True
+ENABLE_DEVELOPER_KEYBOARD = False
 
 
 def main():

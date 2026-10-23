@@ -72,9 +72,14 @@ Keep this workaround in both fill and drawing paths.
   sudo env NEURODECK_SPI_MIRROR=0 ./venv/bin/python main.py
   ```
 
-- Capture is limited to four checks per second. Unchanged frames are skipped,
-  and the SPI worker keeps only the newest pending frame so the Qt UI thread
-  does not wait for a full-screen SPI transfer.
+- Background capture checks run four times per second; unchanged frames are
+  skipped. Button press/release/click and page changes also capture immediately.
+- Press frames have a separate protected queue, so a short tap is transmitted
+  before the release or next-screen frame even if SPI was busy during the tap.
+  Regular frames still use latest-frame-wins. At most two press frames are
+  pending; during an overloaded burst, retain the oldest and newest feedback.
+  SPI writes remain in the worker; pointer release and navigation never wait
+  for a full-screen transfer or an artificial highlight delay.
 - HDMI remains enabled during this validation stage. Headless Qt/offscreen
   mode comes only after frame orientation and refresh behavior work reliably.
 - Touch v1 uses the same `NEURODECK_SPI_ROTATION` value as the mirror so image
