@@ -163,20 +163,33 @@ The current AI mode is text-only. Image analysis and a real local model are not 
 
 ### Files
 
-The File Explorer visual prototype is contained in `screens/file_explorer_screen.py`.
+The File Explorer is contained in `screens/file_explorer_screen.py`.
 It keeps the shared outer shell, with Files above Photos, Favorites and Trash on
-the left, an empty gallery in the middle, and an unselected preview/details area
-on the right. Sort, Open, Delete, Favorite and Share are disabled for this stage.
-Category buttons only change visual selection; Menu returns through the existing
-route. No directory is loaded automatically, no sample files or metadata are
-invented, and storage information is explicitly marked as not loaded.
+the left and a three-column gallery in the middle. Photos reads real images from
+`data/camera_pictures`; Files reads regular files from `data/ai_memory`. Newest
+files appear first, with actual filenames and modification times. A directory
+watcher updates the list after changes, with a one-second fallback while the
+explorer is visible to catch files still being written. Missing folders are
+empty, and unreadable folders are reported without stopping the application.
 
-The screen has no photograph background. Its existing dark teal panel colors
-fade smoothly into black, matching the gradient backgrounds of the controls.
-Buttons and frames use bright cyan neon edges with layered glow and corner
-accents; active navigation uses red neon. Disabled actions remain unavailable.
-The previous read-only listing/image-viewer helpers remain available for the
-later functional stage.
+Only real files have cards; empty categories have no placeholder cells. Longer
+lists scroll by touch drag or mouse wheel. Select an image to see its preview,
+size and dimensions, then use Open for the existing full-screen viewer. Sort,
+Delete, Favorite and Share remain disabled; Favorites and Trash remain empty.
+Menu keeps the existing route, and storage is explicitly marked as not loaded.
+
+The layout follows the gallery reference in a 1515 by 729 design space: sidebar,
+header, file cards, preview, details and action buttons. Nested bevels,
+Japanese subtitles, scanlines, tiny bar markings and corner accents retain the
+reference's small details. Bundled Barlow Condensed and a Japanese glyph subset
+of Noto Sans JP keep the typography available on Radxa; their OFL licenses are
+included in `assets/fonts`.
+
+The screen has no photograph background. Dark teal panel colors fade into black.
+Thin gradient neon edges use cyan for ordinary controls and red for the selected
+category. Disabled actions remain unavailable.
+Thumbnails use scaled image decoding and a bounded cache. Files that are still
+being written are retried, and modified or removed selections update in place.
 
 ### Notepad
 

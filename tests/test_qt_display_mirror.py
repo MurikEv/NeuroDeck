@@ -10,10 +10,10 @@ from unittest.mock import patch
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
 from PyQt6 import uic
-from PyQt6.QtCore import QEvent, QPoint, QPointF, Qt
+from PyQt6.QtCore import QCoreApplication, QEvent, QPoint, QPointF, Qt
 from PyQt6.QtGui import QMouseEvent
 from PyQt6.QtTest import QTest
-from PyQt6.QtWidgets import QApplication
+from PyQt6.QtWidgets import QApplication, QPushButton, QWidget
 
 import state
 from screens.menu_screen import MenuController
@@ -137,6 +137,66 @@ class MirrorFeedbackTests(unittest.TestCase):
             self.mirror._capture_changed()
             self.finish_transfers(3)
         self.assertEqual(self.display.frames, [b"initial", b"pressed", b"released"])
+
+    def test_dynamic_button_fast_press_is_preserved_while_spi_is_busy(self):
+        button = QPushButton("NEW PHOTO", self.window.menu_screen)
+        button.setGeometry(170, 130, 140, 50)
+        button.setStyleSheet("QPushButton { background: #052830; color: cyan; } QPushButton:pressed { background: #ff304b; }")
+        button.show()
+        self.app.processEvents()
+        self.start_busy_spi()
+        QTest.mousePress(button, Qt.MouseButton.LeftButton)
+        pressed_frame = self.mirror._last_frame
+        QTest.mouseRelease(button, Qt.MouseButton.LeftButton)
+        final_frame = self.mirror._last_frame
+        self.assertNotEqual(pressed_frame, final_frame)
+        self.finish_transfers(3)
+        self.assertEqual(self.display.frames[1:], [pressed_frame, final_frame])
+
+    def test_repeated_dynamic_discovery_does_not_duplicate_connections(self):
+        button = QPushButton("PHOTO", self.window.menu_screen)
+        for _ in range(3):
+            button.show()
+            self.app.processEvents()
+            button.hide()
+        self.mirror.register_button(button)
+        self.mirror.register_button(button)
+        with patch.object(self.mirror, "_capture_frame") as capture:
+            button.pressed.emit()
+            capture.assert_called_once_with(preserve_press=True)
+            capture.reset_mock()
+            button.released.emit()
+            capture.assert_called_once_with()
+            capture.reset_mock()
+            button.clicked.emit()
+            capture.assert_called_once_with()
+
+    def test_deleted_dynamic_button_does_not_prevent_replacement_registration(self):
+        removed = QPushButton("OLD PHOTO", self.window.menu_screen)
+        removed.show()
+        self.app.processEvents()
+        removed.deleteLater()
+        QCoreApplication.sendPostedEvents(None, QEvent.Type.DeferredDelete)
+        replacement = QPushButton("NEW PHOTO", self.window.menu_screen)
+        replacement.show()
+        self.app.processEvents()
+        with patch.object(self.mirror, "_capture_frame") as capture:
+            replacement.pressed.emit()
+            capture.assert_called_once_with(preserve_press=True)
+
+    def test_dynamic_buttons_in_another_window_are_not_registered(self):
+        other_window = QWidget()
+        button = QPushButton("UNRELATED", other_window)
+        other_window.show()
+        self.app.processEvents()
+        try:
+            with patch.object(self.mirror, "_capture_frame") as capture:
+                button.pressed.emit()
+                button.released.emit()
+                button.clicked.emit()
+                capture.assert_not_called()
+        finally:
+            other_window.close()
 
     def test_start_failure_stop_and_capture_failure_are_safe(self):
         with patch("services.qt_display_mirror.threading.Thread") as thread:

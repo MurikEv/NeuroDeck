@@ -1,10 +1,11 @@
 from collections import deque
 import sys
 import threading
+from weakref import WeakSet
 
-from PyQt6.QtCore import QObject, QPoint, QTimer
+from PyQt6.QtCore import QEvent, QObject, QPoint, QTimer
 from PyQt6.QtGui import QImage, QPainter, QRegion, QTransform
-from PyQt6.QtWidgets import QAbstractButton
+from PyQt6.QtWidgets import QAbstractButton, QApplication, QWidget
 
 
 UI_WIDTH = 480
@@ -42,6 +43,9 @@ class QtDisplayMirror(QObject):
         self._failure_reported = False
         self._last_frame = None
         self._worker = None
+        self._registered_buttons = WeakSet()
+        self._registration_pending = False
+        self._application = QApplication.instance()
 
         self._timer = QTimer(self)
         self._timer.setInterval(capture_interval_ms)
@@ -50,10 +54,43 @@ class QtDisplayMirror(QObject):
         # Connect after the screen controllers so their highlight/text updates
         # are already applied when render() captures the signal's exact state.
         for button in window.findChildren(QAbstractButton):
-            button.pressed.connect(self._capture_press)
-            button.released.connect(self._capture_changed)
-            button.clicked.connect(self._capture_changed)
+            self.register_button(button)
         window.stackedWidget.currentChanged.connect(self._capture_changed)
+        self._application.installEventFilter(self)
+
+    def register_button(self, button):
+        if (
+            self._stop_event.is_set()
+            or button in self._registered_buttons
+            or not self._window.isAncestorOf(button)
+        ):
+            return
+        button.pressed.connect(self._capture_press)
+        button.released.connect(self._capture_changed)
+        button.clicked.connect(self._capture_changed)
+        self._registered_buttons.add(button)
+
+    def _register_new_buttons(self):
+        self._registration_pending = False
+        if self._stop_event.is_set():
+            return
+        for button in self._window.findChildren(QAbstractButton):
+            self.register_button(button)
+
+    def eventFilter(self, obj, event):
+        if self._stop_event.is_set():
+            return False
+        if event.type() == QEvent.Type.Show and isinstance(obj, QAbstractButton):
+            self.register_button(obj)
+        elif (
+            event.type() in (QEvent.Type.ChildAdded, QEvent.Type.ChildPolished)
+            and isinstance(obj, QWidget)
+            and (obj is self._window or self._window.isAncestorOf(obj))
+            and not self._registration_pending
+        ):
+            self._registration_pending = True
+            QTimer.singleShot(0, self._register_new_buttons)
+        return False
 
     def start(self):
         if self._worker is not None:
@@ -73,6 +110,7 @@ class QtDisplayMirror(QObject):
 
     def stop(self):
         self._timer.stop()
+        self._application.removeEventFilter(self)
         with self._frame_ready:
             self._stop_event.set()
             self._press_frames.clear()
