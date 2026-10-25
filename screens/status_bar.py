@@ -108,8 +108,6 @@ class GlobalStatusController(QObject):
         window.keyboard_frame.installEventFilter(self)
         window.stackedWidget.currentChanged.connect(self._page_changed)
         self._page_changed()
-        self.bar.show()
-        self.shell.show()
         self._raise_chrome()
 
     def _compact_children(self, parent):
@@ -172,12 +170,15 @@ class GlobalStatusController(QObject):
 
     def _page_changed(self, *_args):
         page = self.window.stackedWidget.currentWidget()
-        if page is self.window.menu_screen:
+        fullscreen = page is not None and bool(page.property("fullScreenContent"))
+        if page is self.window.menu_screen or fullscreen:
             self.window.stackedWidget.setGeometry(0, 0, 480, 320)
         else:
             if page is not None and not page.property("statusBarResponsive"):
                 self._compact_children(page)
             self.window.stackedWidget.setGeometry(CONTENT_RECT)
+        self.bar.setVisible(not fullscreen)
+        self.shell.setVisible(not fullscreen)
         self._raise_chrome()
 
     def eventFilter(self, obj, event):

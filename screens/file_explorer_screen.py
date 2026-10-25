@@ -1,6 +1,7 @@
 from collections import OrderedDict
 from datetime import datetime
 from pathlib import Path
+import sys
 import time
 
 from PyQt6.QtCore import QEvent, QFileSystemWatcher, QObject, QPointF, QRectF, QSize, Qt, QTimer
@@ -19,11 +20,19 @@ from PyQt6.QtWidgets import (
 )
 
 from screens.menu_screen import path_from, polygon
+from services.file_explorer_service import DEFAULT_STATE_PATH, FileExplorerStorageError, FileExplorerStore, read_disk_usage
 import state
 
 
 EXPLORER_CYAN = QColor("#20e5f2")
 EXPLORER_SIZE = (1515, 729)
+EXPLORER_SIDEBAR_WIDTH = 320
+EXPLORER_MAIN_LEFT = EXPLORER_SIDEBAR_WIDTH + 30
+SORT_OPTIONS = {
+    "latest": ("NEWEST", "NEWEST FIRST"), "oldest": ("OLDEST", "OLDEST FIRST"),
+    "name_asc": ("A-Z", "NAME A-Z"), "name_desc": ("Z-A", "NAME Z-A"),
+    "size_asc": ("SMALL", "SMALLEST FIRST"), "size_desc": ("LARGE", "LARGEST FIRST"),
+}
 _EXPLORER_FONTS = None
 
 
@@ -288,6 +297,8 @@ class ExplorerFileCard(QAbstractButton):
                 painter.restore()
             explorer_corner_marks(painter, preview.adjusted(3, 3, -3, -3), EXPLORER_CYAN, 10)
             explorer_micro_marks(painter, preview.right() - 46, preview.top() + 7, QColor("#168c9e"))
+            if self.entry.get("favorite"):
+                explorer_icon(painter, "favorites", QRectF(207, 13, 22, 22), QColor("#67f6ff"))
             painter.setFont(explorer_font(21))
             name = painter.fontMetrics().elidedText(self.entry["name"], Qt.TextElideMode.ElideMiddle, 226)
             explorer_text(painter, QRectF(10, 141, 226, 27), name, 21)
@@ -344,16 +355,24 @@ class ExplorerGallery(QScrollArea):
 
     def layout_cards(self):
         width = max(1, self.viewport().width())
-        scale_x = width / 780
+        design_width = 1103 - EXPLORER_MAIN_LEFT - 21
+        scale_x = width / design_width
         scale_y = self.view.height() / EXPLORER_SIZE[1]
-        rows = (len(self.cards) + 2) // 3
-        height = max(self.viewport().height(), round((max(0, rows - 1) * 205 + (196 if rows else 0)) * scale_y))
+        logical_card_width = (design_width - 36) / 2
+        card_width = max(1, round(logical_card_width * scale_x))
+        card_height = max(1, round(logical_card_width * 194 / 245 * scale_y))
+        margin_x = max(1, round(10 * scale_x))
+        gap_x = max(1, width - 2 * margin_x - 2 * card_width)
+        margin_y = max(1, round(2 * scale_y))
+        gap_y = max(1, round(14 * scale_y))
+        rows = (len(self.cards) + 1) // 2
+        height = max(self.viewport().height(), 2 * margin_y + rows * card_height + max(0, rows - 1) * gap_y)
         self.content.resize(width, height)
         for index, card in enumerate(self.cards):
-            column, row = index % 3, index // 3
+            column, row = index % 2, index // 2
             card.setGeometry(
-                round((10 + column * 260) * scale_x), round((2 + row * 205) * scale_y),
-                max(1, round(245 * scale_x)), max(1, round(194 * scale_y)),
+                margin_x + column * (card_width + gap_x), margin_y + row * (card_height + gap_y),
+                card_width, card_height,
             )
 
     def resizeEvent(self, event):
@@ -423,6 +442,82 @@ class FileExplorerScreen(QWidget):
             button.setEnabled(False)
             self.actions[action] = button
         self.actions["open"].clicked.connect(controller.open_selected)
+        self.actions["delete"].clicked.connect(controller.request_delete)
+        self.actions["favorite"].clicked.connect(controller.toggle_favorite)
+        self.actions["sort"].clicked.connect(controller.show_sort_options)
+        self.setup_action_overlay()
+
+    def setup_action_overlay(self):
+        self.overlay_mode = None
+        self.action_overlay = QFrame(self)
+        self.action_overlay.setObjectName("explorerActionOverlay")
+        self.action_overlay.setStyleSheet(
+            "QFrame#explorerActionOverlay { background: rgba(1, 9, 14, 248); border: 1px solid #1595a8; border-radius: 8px; }"
+            "QLabel { color: #74dfe9; background: transparent; border: none; }"
+            "QPushButton { color: #20e5f2; background: #051a23; border: 1px solid #168194; border-radius: 5px; }"
+            "QPushButton:checked { background: #123642; border-color: #45efff; }"
+            "QPushButton:pressed { background: #33131e; border-color: #ff384b; }"
+        )
+        self.overlay_title = QLabel(self.action_overlay)
+        self.overlay_title.setObjectName("explorerOverlayTitle")
+        self.overlay_title.setFont(explorer_font(23, bold=True))
+        self.overlay_title.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.overlay_title.setTextFormat(Qt.TextFormat.PlainText)
+        self.overlay_message = QLabel(self.action_overlay)
+        self.overlay_message.setObjectName("explorerOverlayMessage")
+        self.overlay_message.setFont(explorer_font(17))
+        self.overlay_message.setWordWrap(True)
+        self.overlay_message.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.overlay_message.setTextFormat(Qt.TextFormat.PlainText)
+        self.sort_buttons = {}
+        for mode, (_short, label) in SORT_OPTIONS.items():
+            button = QPushButton(label, self.action_overlay)
+            button.setObjectName("explorerSort_" + mode)
+            button.setFont(explorer_font(17, bold=True))
+            button.setFocusPolicy(Qt.FocusPolicy.NoFocus)
+            button.setCheckable(True)
+            button.clicked.connect(lambda _checked=False, mode=mode: self.controller.set_sort(mode))
+            self.sort_buttons[mode] = button
+        self.cancel_button = QPushButton("CANCEL", self.action_overlay)
+        self.cancel_button.setObjectName("explorerCancelAction")
+        self.confirm_button = QPushButton("DELETE", self.action_overlay)
+        self.confirm_button.setObjectName("explorerConfirmDelete")
+        for button in (self.cancel_button, self.confirm_button):
+            button.setFont(explorer_font(19, bold=True))
+            button.setFocusPolicy(Qt.FocusPolicy.NoFocus)
+        self.confirm_button.setStyleSheet("color: #ff687b; border-color: #cb3548;")
+        self.cancel_button.clicked.connect(self.controller.dismiss_overlay)
+        self.confirm_button.clicked.connect(self.controller.confirm_delete)
+        self.action_overlay.hide()
+
+    def layout_action_overlay(self):
+        self.action_overlay.setGeometry(self.rect())
+        width, height = self.width(), self.height()
+        margin = 16
+        gap = 12
+        button_width = max(1, (width - 2 * margin - gap) // 2)
+        self.overlay_title.setGeometry(margin, 12, width - 2 * margin, 32)
+        self.overlay_message.setGeometry(margin + 4, 50, width - 2 * margin - 8, max(45, height - 122))
+        for index, button in enumerate(self.sort_buttons.values()):
+            button.setGeometry(margin + index % 2 * (button_width + gap), 54 + index // 2 * 44, button_width, 36)
+        self.cancel_button.setGeometry(margin, height - 54, button_width, 40)
+        self.confirm_button.setGeometry(margin + button_width + gap, height - 54, button_width, 40)
+        if self.overlay_mode in ("sort", "error"):
+            self.cancel_button.move((width - button_width) // 2, height - 54)
+
+    def show_action_overlay(self, mode, title, message=""):
+        self.overlay_mode = mode
+        self.layout_action_overlay()
+        self.overlay_title.setText(title)
+        self.overlay_message.setText(message)
+        self.overlay_message.setVisible(mode != "sort")
+        for key, button in self.sort_buttons.items():
+            button.setVisible(mode == "sort")
+            button.setChecked(key == self.controller.sort_mode)
+        self.confirm_button.setVisible(mode == "delete")
+        self.cancel_button.setText("CANCEL" if mode in ("delete", "sort") else "BACK")
+        self.action_overlay.show()
+        self.action_overlay.raise_()
 
     def place(self, widget, x, y, width, height):
         widget.reference_size = (width, height)
@@ -433,15 +528,16 @@ class FileExplorerScreen(QWidget):
 
     def resizeEvent(self, event):
         for button, y, height in zip(self.navigation.values(), (5, 133, 258, 385), (116, 115, 116, 116)):
-            self.place(button, 0, y, 272, height)
-        self.place(self.back_button, 0, 515, 272, 64)
+            self.place(button, 0, y, EXPLORER_SIDEBAR_WIDTH, height)
+        self.place(self.back_button, 0, 515, EXPLORER_SIDEBAR_WIDTH, 64)
         self.place(self.actions["sort"], 881, 16, 207, 62)
         self.place(self.actions["open"], 1133, 464, 177, 71)
         self.place(self.actions["delete"], 1321, 464, 177, 71)
         self.place(self.actions["favorite"], 1133, 550, 365, 71)
         self.place(self.actions["share"], 1133, 635, 365, 71)
-        self.place(self.gallery, 313, 103, 780, 609)
+        self.place(self.gallery, EXPLORER_MAIN_LEFT + 11, 103, 1103 - EXPLORER_MAIN_LEFT - 21, 609)
         self.gallery.layout_cards()
+        self.layout_action_overlay()
         super().resizeEvent(event)
 
     def panel(self, painter, rect, color, fill):
@@ -467,21 +563,22 @@ class FileExplorerScreen(QWidget):
             painter.scale(self.width() / EXPLORER_SIZE[0], self.height() / EXPLORER_SIZE[1])
             painter.setPen(QPen(QColor("#06202a"), 0.8))
             for y in (521, 547, 567, 585):
-                painter.drawPolyline(polygon([(4, y + 9), (46, y - 4), (136, y + 3), (260, y - 7)]))
-            divider = QPainterPath(QPointF(287, 0))
-            divider.lineTo(287, 729)
+                painter.drawPolyline(polygon([(4, y + 9), (46, y - 4), (136, y + 3), (EXPLORER_SIDEBAR_WIDTH - 12, y - 7)]))
+            divider_x = EXPLORER_SIDEBAR_WIDTH + 15
+            divider = QPainterPath(QPointF(divider_x, 0))
+            divider.lineTo(divider_x, 729)
             explorer_neon(painter, divider, QColor("#ff3049"), width=1.6)
             painter.setPen(QPen(QColor("#ff5360"), 2))
             for y1, y2 in ((0, 13), (238, 249), (507, 519), (715, 729)):
-                painter.drawLine(QPointF(287, y1), QPointF(287, y2))
-            self.panel(painter, QRectF(302, 0.8, 801, 88), QColor("#155464"), QColor("#030e14"))
-            explorer_icon(painter, "photos", QRectF(321, 16, 55, 54), EXPLORER_CYAN)
-            explorer_text(painter, QRectF(403, 9, 162, 63), "GALLERY", 42, bold=True, glow=True)
-            explorer_text(painter, QRectF(564, 25, 230, 38), "ギャラリー", 25, japanese=True)
-            self.panel(painter, QRectF(302, 101, 801, 624), QColor("#123e4b"), QColor("#01090e"))
+                painter.drawLine(QPointF(divider_x, y1), QPointF(divider_x, y2))
+            self.panel(painter, QRectF(EXPLORER_MAIN_LEFT, 0.8, 1103 - EXPLORER_MAIN_LEFT, 88), QColor("#155464"), QColor("#030e14"))
+            explorer_icon(painter, "photos", QRectF(EXPLORER_MAIN_LEFT + 19, 16, 55, 54), EXPLORER_CYAN)
+            explorer_text(painter, QRectF(EXPLORER_MAIN_LEFT + 101, 9, 162, 63), "GALLERY", 42, bold=True, glow=True)
+            explorer_text(painter, QRectF(EXPLORER_MAIN_LEFT + 262, 25, 230, 38), "ギャラリー", 25, japanese=True)
+            self.panel(painter, QRectF(EXPLORER_MAIN_LEFT, 101, 1103 - EXPLORER_MAIN_LEFT, 624), QColor("#123e4b"), QColor("#01090e"))
             if not self.controller.entries:
                 text = self.controller.error_message or "NO FILES"
-                explorer_text(painter, QRectF(343, 353, 719, 48), text, 26, QColor("#3b8996"), alignment=Qt.AlignmentFlag.AlignCenter)
+                explorer_text(painter, QRectF(EXPLORER_MAIN_LEFT + 41, 353, 1021 - EXPLORER_MAIN_LEFT, 48), text, 26, QColor("#3b8996"), alignment=Qt.AlignmentFlag.AlignCenter)
             self.panel(painter, QRectF(1113, 0.8, 401, 725), QColor("#8a2636"), QColor("#030d13"))
             preview = QRectF(1127, 16, 374, 301)
             self.panel(painter, preview, QColor("#377d8d"), QColor("#04151e"))
@@ -513,14 +610,28 @@ class FileExplorerScreen(QWidget):
                 dimensions = self.controller.preview_size
                 if dimensions.isValid():
                     explorer_text(painter, QRectF(1138, 432, 345, 27), f"{dimensions.width()} × {dimensions.height()}", 22)
-            self.panel(painter, QRectF(0.8, 599, 271, 129), QColor("#17798b"), QColor("#031018"))
+            self.panel(painter, QRectF(0.8, 599, EXPLORER_SIDEBAR_WIDTH - 1, 129), QColor("#17798b"), QColor("#031018"))
             explorer_icon(painter, "storage", QRectF(17, 613, 45, 48), EXPLORER_CYAN)
-            explorer_text(painter, QRectF(75, 609, 177, 36), "STORAGE", 24, bold=True, glow=True)
-            explorer_text(painter, QRectF(75, 646, 177, 25), "ストレージ", 18, japanese=True)
+            explorer_text(painter, QRectF(75, 609, EXPLORER_SIDEBAR_WIDTH - 95, 36), "STORAGE", 24, bold=True, glow=True)
+            explorer_text(painter, QRectF(75, 646, EXPLORER_SIDEBAR_WIDTH - 95, 25), "ストレージ", 18, japanese=True)
             painter.setPen(QPen(QColor("#0c3540"), 0.8))
             painter.setBrush(QColor("#061c25"))
-            painter.drawRoundedRect(QRectF(21, 670, 227, 13), 6, 6)
-            explorer_text(painter, QRectF(21, 695, 227, 28), "NOT LOADED", 19, QColor("#52b7c4"))
+            meter = QRectF(21, 670, EXPLORER_SIDEBAR_WIDTH - 45, 13)
+            painter.drawRoundedRect(meter, 6, 6)
+            if self.controller.disk_usage is not None:
+                fraction = self.controller.storage_fraction
+                if fraction > 0:
+                    painter.save()
+                    clip = QPainterPath()
+                    clip.addRoundedRect(meter, 6, 6)
+                    painter.setClipPath(clip)
+                    fill = QLinearGradient(meter.topLeft(), meter.topRight())
+                    fill.setColorAt(0, QColor("#079fb5"))
+                    fill.setColorAt(1, EXPLORER_CYAN)
+                    painter.fillRect(QRectF(meter.x(), meter.y(), meter.width() * fraction, meter.height()), fill)
+                    painter.restore()
+                explorer_text(painter, QRectF(EXPLORER_SIDEBAR_WIDTH - 83, 615, 62, 26), f"{fraction:.0%}", 18, alignment=Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
+            explorer_text(painter, QRectF(21, 695, EXPLORER_SIDEBAR_WIDTH - 45, 28), self.controller.storage_text, 19, QColor("#52b7c4"))
         finally:
             painter.end()
 
@@ -530,6 +641,7 @@ class ImageViewerScreen(QWidget):
         super().__init__()
         self.controller = controller
         self.setProperty("statusBarResponsive", True)
+        self.setProperty("fullScreenContent", True)
 
     def resizeEvent(self, event):
         self.controller.layout_image_viewer()
@@ -540,7 +652,7 @@ class ImageViewerScreen(QWidget):
 class FileExplorerController(QObject):
     image_extensions = {".jpg", ".jpeg", ".png", ".bmp", ".gif", ".webp", ".tif", ".tiff"}
 
-    def __init__(self, window, pictures_path=None, ai_memory_path=None):
+    def __init__(self, window, pictures_path=None, ai_memory_path=None, store_path=None):
         super().__init__(window)
         self.window = window
         root = Path(__file__).resolve().parents[1] / "data"
@@ -558,6 +670,21 @@ class FileExplorerController(QObject):
         self._thumbnails = OrderedDict()
         self._failed_thumbnails = set()
         self._closed = False
+        self.pending_delete = None
+        self.sort_mode = "latest"
+        self.store_path = Path(store_path) if store_path is not None else DEFAULT_STATE_PATH
+        self.disk_path = self.store_path.parent
+        self.disk_usage = None
+        self.disk_error = ""
+        self._disk_checked_at = None
+        self.store = None
+        self.storage_error = ""
+        try:
+            self.store = FileExplorerStore({"files": self.ai_memory_path, "photos": self.pictures_path}, self.store_path)
+            self.sort_mode = self.store.sort_mode
+        except FileExplorerStorageError as exc:
+            self.storage_error = str(exc)
+            print(f"File Explorer storage unavailable: {exc}", file=sys.stderr)
 
         self.file_watcher = QFileSystemWatcher(self)
         self.refresh_debounce = QTimer(self)
@@ -582,6 +709,7 @@ class FileExplorerController(QObject):
 
     def close(self):
         self._closed = True
+        self.dismiss_overlay()
         self.refresh_timer.stop()
         self.refresh_debounce.stop()
         watched = self.file_watcher.directories()
@@ -596,9 +724,53 @@ class FileExplorerController(QObject):
         if self.view.isVisible():
             self.refresh_files()
 
+    def refresh_disk_usage(self, force=False):
+        if self._closed:
+            return
+        now = time.monotonic()
+        if not force and self._disk_checked_at is not None and now - self._disk_checked_at < 1:
+            return
+        self._disk_checked_at = now
+        try:
+            usage = read_disk_usage(self.disk_path)
+            error = ""
+        except (OSError, ValueError) as exc:
+            usage = None
+            error = str(exc)
+            if error != self.disk_error:
+                print(f"File Explorer disk usage unavailable: {exc}", file=sys.stderr)
+        changed = usage != self.disk_usage or error != self.disk_error
+        self.disk_usage = usage
+        self.disk_error = error
+        if changed and hasattr(self, "view"):
+            self.view.update()
+
+    @property
+    def storage_fraction(self):
+        if self.disk_usage is None or self.disk_usage["total"] <= 0:
+            return 0.0
+        return max(0.0, min(1.0, self.disk_usage["used"] / self.disk_usage["total"]))
+
+    @property
+    def storage_text(self):
+        if self.disk_usage is None:
+            return "UNAVAILABLE"
+        return f"{self.format_disk_size(self.disk_usage['used'])} / {self.format_disk_size(self.disk_usage['total'])}"
+
+    @staticmethod
+    def format_disk_size(size):
+        value = float(size)
+        for unit in ("B", "KB", "MB", "GB", "TB", "PB"):
+            if value < 1024 or unit == "PB":
+                return f"{int(value)} B" if unit == "B" else f"{value:.1f} {unit}"
+            value /= 1024
+
     def watch_directories(self):
         paths = set()
-        for folder in (self.ai_memory_path, self.pictures_path):
+        folders = [self.ai_memory_path, self.pictures_path, self.store_path.parent]
+        if self.store is not None:
+            folders.append(self.store.trash_dir)
+        for folder in folders:
             try:
                 candidate = folder
                 while not candidate.is_dir() and candidate != candidate.parent:
@@ -624,6 +796,7 @@ class FileExplorerController(QObject):
         changed = self.category != category
         self.category = category
         if changed:
+            self.dismiss_overlay()
             self.selected_path = None
             self._snapshot = None
             self.view.gallery.verticalScrollBar().setValue(0)
@@ -632,34 +805,44 @@ class FileExplorerController(QObject):
     def refresh_files(self):
         if self._closed:
             return
+        self.refresh_disk_usage()
         self.watch_directories()
         entries = []
         error_message = ""
         folder = {"files": self.ai_memory_path, "photos": self.pictures_path}.get(self.category)
-        if folder is not None:
-            try:
-                for path in folder.iterdir():
-                    try:
-                        if not path.is_file():
-                            continue
-                        is_image = path.suffix.lower() in self.image_extensions
-                        if self.category == "photos" and not is_image:
-                            continue
-                        stat = path.stat()
-                    except OSError:
+        try:
+            if folder is not None:
+                paths = ((path, {}) for path in folder.iterdir())
+            elif self.store is not None and self.category == "favorites":
+                paths = ((path, {}) for path in self.store.favorites())
+            elif self.store is not None and self.category == "trash":
+                paths = ((record["path"], record) for record in self.store.trash_entries())
+            else:
+                paths = ()
+            for path, extra in paths:
+                try:
+                    if not path.is_file() or path.is_symlink():
                         continue
-                    entries.append({
-                        "path": path, "name": path.name, "size": stat.st_size,
-                        "modified_ns": stat.st_mtime_ns, "is_image": is_image,
-                    })
-            except FileNotFoundError:
-                pass
-            except OSError as exc:
-                error_message = "FOLDER UNAVAILABLE"
-                if error_message != self.error_message:
-                    print(f"File Explorer unavailable: {folder}: {exc}")
-        entries.sort(key=lambda entry: (-entry["modified_ns"], entry["name"].casefold()))
-        snapshot = (self.category, error_message, tuple((entry["path"], entry["modified_ns"], entry["size"]) for entry in entries))
+                    is_image = path.suffix.lower() in self.image_extensions
+                    if self.category == "photos" and not is_image:
+                        continue
+                    stat = path.stat()
+                except OSError:
+                    continue
+                favorite = bool(extra.get("is_favorite")) if self.category == "trash" else self.store is not None and self.store.is_favorite(path)
+                entries.append({
+                    "path": path, "name": extra.get("name", path.name), "size": stat.st_size,
+                    "modified_ns": stat.st_mtime_ns, "is_image": is_image, "favorite": favorite,
+                    "deleted_ns": extra.get("deleted_ns"),
+                })
+        except FileNotFoundError:
+            pass
+        except (OSError, FileExplorerStorageError) as exc:
+            error_message = "FOLDER UNAVAILABLE"
+            if error_message != self.error_message:
+                print(f"File Explorer unavailable: {exc}", file=sys.stderr)
+        self.sort_entries(entries)
+        snapshot = (self.category, self.sort_mode, error_message, tuple((entry["path"], entry["modified_ns"], entry["size"], entry["favorite"]) for entry in entries))
         self.error_message = error_message
         if snapshot != self._snapshot:
             self._snapshot = snapshot
@@ -679,6 +862,20 @@ class FileExplorerController(QObject):
                     card.update()
             if self.selected_path is not None and self.preview_image.isNull():
                 self.update_selection()
+
+    def sort_entries(self, entries):
+        mode = self.sort_mode
+        if mode in ("latest", "oldest"):
+            key = lambda entry: (entry.get("deleted_ns") or entry["modified_ns"])
+            reverse = mode == "latest"
+        elif mode in ("size_asc", "size_desc"):
+            key = lambda entry: entry["size"]
+            reverse = mode == "size_desc"
+        else:
+            key = lambda entry: entry["name"].casefold()
+            reverse = mode == "name_desc"
+        entries.sort(key=lambda entry: (entry["name"].casefold(), str(entry["path"])))
+        entries.sort(key=key, reverse=reverse)
 
     @staticmethod
     def entry_key(entry):
@@ -732,6 +929,25 @@ class FileExplorerController(QObject):
             if selected is not None and selected["is_image"]:
                 self.preview_image, self.preview_size = self.read_scaled_image(selected["path"], QSize(640, 480))
         self.view.actions["open"].setEnabled(selected is not None and selected["is_image"] and not self.preview_image.isNull())
+        self.view.actions["delete"].setEnabled(self.store is not None and selected is not None)
+        self.view.actions["favorite"].setEnabled(self.store is not None and selected is not None)
+        self.view.actions["sort"].setEnabled(self.store is not None)
+        short, label = SORT_OPTIONS[self.sort_mode]
+        self.view.actions["sort"].setText(short)
+        self.view.actions["sort"].setAccessibleName("Sort: " + label)
+        self.view.actions["sort"].setToolTip(label)
+        favorite_button = self.view.actions["favorite"]
+        if self.category == "trash":
+            favorite_button.setText("RESTORE")
+            favorite_button.subtitle = "RESTORE FILE"
+            favorite_button.icon = "back"
+        else:
+            favorite = selected is not None and selected["favorite"]
+            favorite_button.setText("REMOVE FAVORITE" if favorite else "ADD TO FAVORITES")
+            favorite_button.subtitle = "お気に入り" if favorite else "お気に入りに追加"
+            favorite_button.icon = "favorites"
+        favorite_button.setAccessibleName(favorite_button.text())
+        favorite_button.update()
         for card in self.view.gallery.cards:
             card.update()
         self.view.update()
@@ -739,7 +955,106 @@ class FileExplorerController(QObject):
     def open_selected(self):
         selected = self.selected_entry()
         if selected is not None and selected["is_image"]:
+            self.dismiss_overlay()
             self.open_image(selected["path"])
+
+    def dismiss_overlay(self):
+        self.pending_delete = None
+        if hasattr(self, "view"):
+            self.view.action_overlay.hide()
+            self.view.overlay_mode = None
+
+    def show_error(self, title, error):
+        self.pending_delete = None
+        print(f"File Explorer {title.lower()}: {error}", file=sys.stderr)
+        self.view.show_action_overlay("error", title, str(error))
+
+    def show_sort_options(self):
+        self.pending_delete = None
+        if self.store is None:
+            self.show_error("STORAGE UNAVAILABLE", self.storage_error)
+            return
+        self.view.show_action_overlay("sort", "SORT FILES")
+
+    def set_sort(self, mode):
+        if self.store is None:
+            self.show_error("SORT NOT CHANGED", self.storage_error)
+            return False
+        try:
+            if mode not in SORT_OPTIONS:
+                raise FileExplorerStorageError("Unknown sort order")
+            self.store.set_sort(mode)
+        except FileExplorerStorageError as exc:
+            self.show_error("SORT NOT CHANGED", exc)
+            return False
+        self.sort_mode = mode
+        self.dismiss_overlay()
+        self._snapshot = None
+        self.refresh_files()
+        return True
+
+    def toggle_favorite(self):
+        if self.category == "trash":
+            return self.restore_selected()
+        selected = self.selected_entry()
+        if self.store is None or selected is None:
+            return False
+        try:
+            self.store.toggle_favorite(selected["path"])
+        except FileExplorerStorageError as exc:
+            self.show_error("FAVORITE NOT SAVED", exc)
+            return False
+        self.refresh_files()
+        return True
+
+    def request_delete(self):
+        selected = self.selected_entry()
+        if self.store is None or selected is None:
+            return
+        self.pending_delete = {
+            "path": selected["path"], "modified_ns": selected["modified_ns"],
+            "size": selected["size"], "category": self.category,
+        }
+        permanent = self.category == "trash"
+        title = "DELETE PERMANENTLY" if permanent else "MOVE TO TRASH"
+        advice = "This cannot be undone." if permanent else "You can restore this file from TRASH."
+        self.view.show_action_overlay("delete", title, selected["name"] + "\n\n" + advice)
+
+    def confirm_delete(self):
+        pending = self.pending_delete
+        if pending is None or self.store is None or pending["category"] != self.category:
+            self.dismiss_overlay()
+            return False
+        path = pending["path"]
+        try:
+            stat = path.stat()
+            if not path.is_file() or path.is_symlink() or (stat.st_mtime_ns, stat.st_size) != (pending["modified_ns"], pending["size"]):
+                raise FileExplorerStorageError("The file changed. Select it again before deleting.")
+            if pending["category"] == "trash":
+                self.store.delete_permanently(path)
+            else:
+                self.store.trash_file(path)
+        except (OSError, FileExplorerStorageError) as exc:
+            self.refresh_files()
+            self.show_error("FILE NOT DELETED", exc)
+            return False
+        self.dismiss_overlay()
+        self.refresh_files()
+        self.refresh_disk_usage(force=True)
+        return True
+
+    def restore_selected(self):
+        selected = self.selected_entry()
+        if self.store is None or selected is None or self.category != "trash":
+            return False
+        try:
+            self.store.restore_file(selected["path"])
+        except FileExplorerStorageError as exc:
+            self.show_error("FILE NOT RESTORED", exc)
+            return False
+        self.refresh_files()
+        self.refresh_disk_usage(force=True)
+        return True
 
     @staticmethod
     def format_size(size):
@@ -763,7 +1078,12 @@ class FileExplorerController(QObject):
         if obj is self.window.fileexplorer_screen and event.type() == QEvent.Type.Resize:
             self.view.setGeometry(obj.rect())
         elif obj is self.window.fileexplorer_screen and event.type() == QEvent.Type.Show:
+            self.refresh_disk_usage(force=True)
             self.refresh_files()
+            if self.storage_error:
+                self.show_error("STORAGE UNAVAILABLE", self.storage_error)
+        elif obj is self.window.fileexplorer_screen and event.type() == QEvent.Type.Hide:
+            self.dismiss_overlay()
         return False
 
     def setup_table(self):
@@ -790,6 +1110,16 @@ class FileExplorerController(QObject):
         self.image_label.setStyleSheet("background-color: black; color: white;")
 
         self.image_back_btn = QPushButton("BACK", self.image_viewer_screen)
+        self.image_back_btn.setObjectName("imageViewerBackButton")
+        self.image_back_btn.setFocusPolicy(Qt.FocusPolicy.NoFocus)
+        self.image_back_btn.setFont(explorer_font(20, bold=True))
+        self.image_back_btn.setStyleSheet(
+            "QPushButton { background-color: rgba(0, 10, 16, 178);"
+            "color: rgba(32, 229, 242, 178); border: 1px solid rgba(32, 229, 242, 178);"
+            "border-radius: 6px; }"
+            "QPushButton:pressed { background-color: rgba(8, 64, 76, 178);"
+            "border-color: rgba(255, 56, 75, 178); color: rgba(255, 80, 98, 178); }"
+        )
         self.image_back_btn.clicked.connect(self.back_to_file_explorer)
 
         self.window.stackedWidget.addWidget(self.image_viewer_screen)
@@ -797,13 +1127,9 @@ class FileExplorerController(QObject):
         self.layout_image_viewer()
 
     def layout_image_viewer(self):
-        button_height = 44
-        width = self.image_viewer_screen.width()
-        height = self.image_viewer_screen.height()
-        image_height = max(0, height - button_height)
-
-        self.image_label.setGeometry(0, 0, width, image_height)
-        self.image_back_btn.setGeometry(0, image_height, width, button_height)
+        self.image_label.setGeometry(self.image_viewer_screen.rect())
+        self.image_back_btn.setGeometry(10, 10, 84, 36)
+        self.image_back_btn.raise_()
 
     def show_ai_memory(self):
         self.select_category("files")

@@ -28,3 +28,4 @@ hardware_tests/display_test_working.py
 tests/
 
 data/notepad/
+data/file_explorer/

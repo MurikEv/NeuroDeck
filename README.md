@@ -165,18 +165,44 @@ The current AI mode is text-only. Image analysis and a real local model are not 
 
 The File Explorer is contained in `screens/file_explorer_screen.py`.
 It keeps the shared outer shell, with Files above Photos, Favorites and Trash on
-the left and a three-column gallery in the middle. Photos reads real images from
-`data/camera_pictures`; Files reads regular files from `data/ai_memory`. Newest
-files appear first, with actual filenames and modification times. A directory
+the wider left sidebar and a two-column gallery with larger cards in the middle.
+Photos reads real images from `data/camera_pictures`; Files reads regular files
+from `data/ai_memory`. Newest files appear first by default, with actual
+filenames and modification times. A directory
 watcher updates the list after changes, with a one-second fallback while the
 explorer is visible to catch files still being written. Missing folders are
 empty, and unreadable folders are reported without stopping the application.
 
 Only real files have cards; empty categories have no placeholder cells. Longer
 lists scroll by touch drag or mouse wheel. Select an image to see its preview,
-size and dimensions, then use Open for the existing full-screen viewer. Sort,
-Delete, Favorite and Share remain disabled; Favorites and Trash remain empty.
-Menu keeps the existing route, and storage is explicitly marked as not loaded.
+size and dimensions, then use Open for the full-screen viewer. It uses the entire
+480x320 canvas with all shared bars hidden, preserves the image proportions, and
+overlays one Back button with 30% transparency. Back returns to File Explorer
+with its shared bars and selection restored.
+
+Add to Favorites toggles a persistent reference to the selected file and marks
+its card with a star. Favorites lists saved files from both source folders.
+Delete asks for confirmation and moves the file into the local Trash. In Trash,
+Restore returns it to its original folder; a conflicting filename receives a
+`(restored N)` suffix instead of replacing an existing file. Delete in Trash
+asks for a second confirmation before removing the selected file permanently.
+
+Sort opens six touch-friendly choices: newest, oldest, name A-Z, name Z-A,
+smallest and largest. The chosen order survives live updates and restarts.
+Favorites, sort preferences and the Trash index are saved atomically by
+`services/file_explorer_service.py` in `data/file_explorer/state.json`, with
+trashed files under `data/file_explorer/trash`. This runtime data is Git-ignored.
+Failed saves preserve the previous state and roll back file moves; errors and
+confirmation controls appear inside the application so they are visible on SPI.
+Share remains disabled, and Menu keeps the existing route.
+
+Storage reads the actual total, used and free space of the filesystem containing
+NeuroDeck's data directory. It displays used / total capacity, the used percentage
+and a proportional cyan meter. Readings refresh while File Explorer is visible,
+on opening it and after deleting or restoring a file. Missing settings folders
+use their nearest existing parent on the same volume. An unavailable disk shows
+`UNAVAILABLE` instead of a fabricated or stale value. Files in Trash continue to
+occupy disk space until permanently deleted.
 
 The layout follows the gallery reference in a 1515 by 729 design space: sidebar,
 header, file cards, preview, details and action buttons. Nested bevels,
