@@ -74,6 +74,7 @@ class GlobalScreenShell(QWidget):
         self.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents)
         self.setAttribute(Qt.WidgetAttribute.WA_NoSystemBackground)
         self.setFocusPolicy(Qt.FocusPolicy.NoFocus)
+        self._window = window
         canvas = getattr(window, "menu_canvas", None)
         self._backdrop = canvas.grab() if canvas else QPixmap()
         self._chrome_region = (
@@ -89,6 +90,9 @@ class GlobalScreenShell(QWidget):
             painter.fillRect(self.rect(), Qt.GlobalColor.black)
             if not self._backdrop.isNull():
                 painter.drawPixmap(0, 0, self._backdrop)
+            page = self._window.stackedWidget.currentWidget()
+            if page is not None and page.property("englishChrome"):
+                painter.fillRect(QRect(205, 301, 86, 11), Qt.GlobalColor.black)
         finally:
             painter.end()
 
@@ -179,6 +183,7 @@ class GlobalStatusController(QObject):
             self.window.stackedWidget.setGeometry(CONTENT_RECT)
         self.bar.setVisible(not fullscreen)
         self.shell.setVisible(not fullscreen)
+        self.shell.update()
         self._raise_chrome()
 
     def eventFilter(self, obj, event):

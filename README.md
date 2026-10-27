@@ -155,6 +155,27 @@ its SIL Open Font License is included in `assets/fonts/OFL-Rajdhani.txt`.
 
 `AIController` sends text prompts through `AIService`. Online requests use `GroqService`; offline requests return a fixed message. Requests run in a background Python thread and answers return to the UI through a queue polled by a Qt timer.
 
+The AI screen is drawn in `screens/ai_screen.py`, following the reference's
+1500x733 central layout: layered neon cards, a compact AI/network header, scrolling
+message bubbles, prompt counter and Send/Clear controls. New Chat, History,
+Menu and Clear replace the reference's sidebar; there is no Offline Mode button
+or Japanese interface text. The shared footer's Japanese motto is hidden only
+on this screen. A narrower sidebar leaves more room for responses; the model
+name is omitted from the chat header. Connectivity uses the shared cached
+network status rather than sample reference values.
+
+The existing prompt widget and touch keyboard are retained. The counter reflects
+the actual input, with a 2000-character send limit. Composer Clear only empties
+the prompt; sidebar Clear also resets the active conversation and AI context.
+New Chat retains the previous transcript in the current session's History
+(up to 20 chats). History is held in memory and is not saved to disk. No sample
+messages, chat names or timestamps are loaded on startup. Clear/New Chat are
+disabled during a request so the context cannot be reset while it is changing.
+
+Bundled Barlow Condensed and Noto Sans provide display lettering and English /
+Russian message text. The Noto Sans chat subset and its source licenses are
+included in `assets/fonts`; no additional runtime dependency is required.
+
 The current AI mode is text-only. Image analysis and a real local model are not implemented.
 
 ### Camera
@@ -283,7 +304,6 @@ Running from another working directory is not currently supported because UI and
 
 - Camera shutdown and network-monitor shutdown have known thread lifecycle races.
 - AI requests have no application-level cancellation or timeout handling.
-- Clearing AI history during a running request can produce inconsistent history.
 - Network status is based on a connection test to `1.1.1.1:53`, not direct Groq availability.
 - The global `Q` hotkey conflicts with normal text entry.
 - File and image loading run synchronously in the UI thread.

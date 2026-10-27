@@ -3,6 +3,8 @@ from dotenv import load_dotenv
 import os
 
 class GroqService:
+    MODEL_NAME = "openai/gpt-oss-20b"
+
     def __init__(self):
         load_dotenv()
 
@@ -18,7 +20,7 @@ class GroqService:
         self.chat_history.append({"role": "user", "content": prompt})
         self.chat_completion = self.client.chat.completions.create(
             messages=self.chat_history,
-            model="llama-3.1-8b-instant",
+            model=self.MODEL_NAME,
         )
 
         answer = self.chat_completion.choices[0].message.content

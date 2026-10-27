@@ -5,8 +5,12 @@ class AIService:
     def __init__(self):
         self.groq_service = GroqService()
 
+    @property
+    def model_name(self):
+        return self.groq_service.MODEL_NAME
+
     def local_ai(self, prompt):
-        return "Offline mode: local AI is not implemented yet."
+        return "An Internet connection is required to send messages."
 
     def ask_ai(self, prompt):
         if not prompt:
